@@ -368,7 +368,7 @@ int main(int argc,char *argv[])
 			clean_and_exit(NULL,1);
 		if(regcomp(&preg_out,"[0-9]+.packets?(.+in.buff-out|.\\(.+stats?.units?\\).are.in)",REG_EXTENDED) != 0)
 			clean_and_exit(NULL,1);
-		if(regcomp(&preg_contest,"[A-Z0-9]{3}:.Loaded",REG_EXTENDED) != 0)
+		if(regcomp(&preg_contest,"[A-Z0-9-]{3,6}:.Loaded",REG_EXTENDED) != 0)
 			clean_and_exit(NULL,1);
 		if(regcomp(&preg_proxy,"((Retrieved|Sent).+(stat..unit|packet)|Attempting.to.resolve|Connect(ing|ed).to)",REG_EXTENDED) !=0)
 			clean_and_exit(NULL,1);

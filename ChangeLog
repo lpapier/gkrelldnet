@@ -1,6 +1,9 @@
 GKrellM plugin ChangeLog
 ------------------------
 
+0.14 Sat Jul 17, 2004
+	* new: each cpu has is own krell (patch from Christoph Hohmann).
+	
 0.13 Fri Aug 15, 2003
 	* nop ;-)
 	
@@ -61,6 +64,9 @@ GKrellM plugin ChangeLog
 dnetw ChangeLog
 ---------------
 
+0.14 Sat Jul 17, 2004
+	* none.
+	
 0.13 Fri Aug 15, 2003
 	* new: use openpty for FreeBSD support and possibly other *BSD.
 	

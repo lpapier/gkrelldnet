@@ -1,3 +1,4 @@
+/* $Id: gkrelldnet.h,v 1.10 2004-07-17 10:29:34 papier Exp $ */
 
 #ifndef __GKRELLDNET_H__
 #define __GKRELLDNET_H__

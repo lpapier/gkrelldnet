@@ -1,3 +1,5 @@
+/* $Id: gkrelldnet.c,v 1.27 2004-07-17 10:29:34 papier Exp $ */
+
 /* GKrelldnet: a GKrellM plugin to monitor Distributed.net client
 |  Copyright (C) 2000-2003 Laurent Papier
 |
@@ -37,7 +39,7 @@ static GtkWidget *gkrellm_vbox;
 static GkrellmMonitor  *monitor;
 static GkrellmPanel	*panel;
 static GkrellmDecal    *decal_wu;
-static GkrellmKrell    *krell_percent;
+static GkrellmKrell    *krell_percent[MAX_CPU];
 static gint		style_id;
 static gboolean mouse_in;
 static GtkTooltips *tooltip = NULL;
@@ -52,6 +54,8 @@ static GtkWidget *check_timeout_spin_button;
 static gint gk_width, separator_len;
 /* buf. for CPU percentage */
 static ulonglong buf_cpu_val[MAX_CPU];
+/* buf nb of active CPU */
+static int buf_n_cpu;
 
 /* config. and monitored value */
 struct dnetc_monitor
@@ -71,6 +75,40 @@ static struct dnetc_monitor dnetmon = {
 	"",
 	NULL
 };
+
+/* create a single krell */
+static void create_krell(int num)
+{
+	GkrellmStyle      *style;
+	GkrellmPiximage   *krell_image;
+
+	style = gkrellm_meter_style(style_id);
+	krell_image = gkrellm_krell_meter_piximage(style_id);
+
+	krell_percent[num] = gkrellm_create_krell(panel, krell_image, style);
+	gkrellm_monotonic_krell_values(krell_percent[num], FALSE);
+	gkrellm_set_krell_full_scale(krell_percent[num], 100, 1);
+
+	gkrellm_insert_krell(panel, krell_percent[num], FALSE);
+}
+
+/* create a krell for every active CPU */
+static void create_percentage_krells()
+{
+	int i;
+
+	for (i = 0; i < buf_n_cpu; i++)
+		if (krell_percent[i] == NULL)
+			create_krell(i);
+
+	for (i = buf_n_cpu; i < MAX_CPU; i++)
+		if (krell_percent[i] != NULL)
+		{
+			gkrellm_remove_krell(panel, krell_percent[i]);
+			gkrellm_destroy_krell(krell_percent[i]);
+			krell_percent[i] = NULL;
+		}
+}
 
 /* update dnet values */
 static void update_dnet2(void)
@@ -99,6 +137,8 @@ static void update_dnet2(void)
 			dnetmon.shmem = NULL;
 			for(i=0;i<MAX_CPU;i++)
 		   		buf_cpu_val[i] = 0;
+			buf_n_cpu = 1;
+			create_percentage_krells();
 		}
 		else
 		{
@@ -114,6 +154,11 @@ static void update_dnet2(void)
 				}
 				/* keep old value */
 				buf_cpu_val[i] = dnetmon.shmem->val_cpu[i];
+			}
+			if (buf_n_cpu != dnetmon.shmem->n_cpu)
+			{
+				buf_n_cpu = dnetmon.shmem->n_cpu;
+				create_percentage_krells();
 			}
 		}
 	}
@@ -208,11 +253,14 @@ static void update_decals_text(gchar *text)
 
 static void update_krells(void)
 {
-	if(dnetmon.shmem != NULL && dnetmon.shmem->cmode == CRUNCH_RELATIVE
-		&& !mouse_in)
-		gkrellm_update_krell(panel, krell_percent, dnetmon.shmem->val_cpu[0]);
-	else
-		gkrellm_update_krell(panel, krell_percent, 0);
+	int i;
+
+	for (i = 0; i < buf_n_cpu; i++)
+		if(dnetmon.shmem != NULL && krell_percent[i] != NULL
+		   && dnetmon.shmem->cmode == CRUNCH_RELATIVE && !mouse_in)
+			gkrellm_update_krell(panel, krell_percent[i], dnetmon.shmem->val_cpu[i]);
+		else
+			gkrellm_update_krell(panel, krell_percent[i], 0);
 }		
 
 static void update_plugin(void)
@@ -320,9 +368,7 @@ static void create_plugin(GtkWidget *vbox, gint first_create)
 	ts = gkrellm_panel_textstyle(style_id);
 	panel->textstyle = ts;
 
-    krell_percent = gkrellm_create_krell(panel, krell_image, style);
-	gkrellm_monotonic_krell_values(krell_percent, FALSE);
-	gkrellm_set_krell_full_scale(krell_percent, 100, 1);
+	create_krell(0);
 
 	y = -1;
 	decal_wu = gkrellm_create_decal_text(panel,"gd8", ts, style, -1, -1, -1);
@@ -480,7 +526,7 @@ static void create_dnet_tab(GtkWidget *tab)
 	about_text = g_strdup_printf(
 		"GKrellDnet %s\n" \
 		"GKrellM distributed.net Plugin\n\n" \
-		"Copyright (C) 2000-2003 Laurent Papier\n" \
+		"Copyright (C) 2000-2004 Laurent Papier\n" \
 		"papier@tuxfan.net\n" \
 		"http://gkrelldnet.sourceforge.net/\n\n" \
 		"Released under the GNU Public Licence",
@@ -522,6 +568,7 @@ static void load_config(gchar *arg)
 
 static void apply_config(void)
 {
+	int i;
 	const gchar *s;
 
 	/* update config vars */
@@ -540,8 +587,12 @@ static void apply_config(void)
 	{
 		gkrellm_panel_destroy(panel);
 		panel = NULL;
+		/* all krell are destroyed */
+		for(i=0;i<MAX_CPU;i++)
+			krell_percent[i] = NULL;
+		buf_n_cpu = 1;
 	}
-	/* create new panel */
+	/* recreate panel */
 	create_plugin(gkrellm_vbox,1);
 }
 
@@ -580,7 +631,11 @@ GkrellmMonitor *gkrellm_init_plugin()
 
 	/* init cpu values buffer */
 	for(i=0;i<MAX_CPU;i++)
+	{
 		buf_cpu_val[i] = 0;
+		krell_percent[i] = NULL;
+	}
+	buf_n_cpu = 1;
 
 	style_id = gkrellm_add_meter_style(&plugin_mon, STYLE_NAME);
 	monitor = &plugin_mon;

@@ -1,3 +1,4 @@
+# $Id: Makefile,v 1.11 2004-07-17 10:29:34 papier Exp $
 
 CC = gcc
 CFLAGS = -Wall -O2 -D_GNU_SOURCE

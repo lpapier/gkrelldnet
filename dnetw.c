@@ -1,9 +1,9 @@
+/* $Id: dnetw.c,v 1.23 2004-07-17 10:29:34 papier Exp $ */
+
 /* dnetw: a distributed.net client wrapper
 |  Copyright (C) 2000-2003 Laurent Papier
 |
 |  Author:  Laurent Papier    papier@tuxfan.net
-|
-| $Id: dnetw.c,v 1.22 2003-08-15 15:52:26 papier Exp $
 |
 |  This program is free software which I release under the GNU General Public
 |  License. You may redistribute and/or modify this program under the terms

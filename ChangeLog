@@ -1,5 +1,5 @@
-GKrellDnet ChangeLog
---------------------
+GKrellM plugin ChangeLog
+------------------------
 
 0.3 Sun Jul 30, 2000
 	* left mouse button start the dnet client.
@@ -14,6 +14,13 @@ GKrellDnet ChangeLog
 dnetw ChangeLog
 ---------------
 
+0.4 Sat Aug 05, 2000
+	* support for multi-processors system (not only SMP).
+	* '-c' option to pass the full dnet client command line including
+	dnetc options.
+	* bugfix: sometimes the wrapper miss the contest or the I/O buffers
+	info.
+	
 0.2 Sun Jul 30, 2000
 	* can really be started from any directory.
 	* add a quiet option -q.

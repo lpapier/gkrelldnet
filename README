@@ -12,7 +12,7 @@ Requirements
 * a Linux system (the wrapper will only work on Linux system but can be ported
   to other Unix system).
 * a working Distributed.net client (see http://www.distributed.net/).
-* GKrellM multi-monitor app. (see http://gkrellm.net/).
+* GKrellM multi-monitor app (0.10.1 or better) (see http://gkrellm.net/).
 
 
 GKrellDnet provides
@@ -28,7 +28,10 @@ GKrellDnet provides
 
 Limitation
 ==========
-* currently only one cpu is supported.
+* the plugin currently only support one cpu. If you have ideas about how to
+  setup the plugin layout for SMP/multi proc. system, send me an email now !
+* on multi-proc. system, you will get inaccurate contest report if not all
+  crunchers work on the same contest.
 * see TODO file.
 
 
@@ -51,16 +54,14 @@ directory in my path.
 Usage
 =====
 
-First you need to setup your dnet client so that you don't need to use command
-line options. This is a limitation of the wrapper. This limitation will be
-removed in the future.
+First you need to setup your dnet client.
 Now, you can use the wrapper to start the dnet client or you can left click in
 the GKrellM plugin (be sure that the 'dnetc' executable is in your path).
 
 VERY IMPORTANT:
 ---------------
 dnetw only works if you DO NOT redirect the client output to
-a file. The client output MUST be stdout.
+a file. The client output MUST be stdout. So check your client configuration.
 
 If you want to redirect the dnet client to a file you must use the dnetw
 option '-l'.
@@ -72,6 +73,12 @@ redirect the client output to dnet.log.
 ex: dnetw /tmp/dnetw.log
 this command will monitor the dnet client in /tmp/dnetw.log file and
 print the client output on your terminal.
+
+Now, it's possible to give the full dnetc command line to dnetw.
+ex: dnetw -c "dnetc -numcpu 2" -l dnet.log /tmp/dnetw.log
+this command will force the client to start 2 crunchers.
+NOTE: you must enclose the command line with simple or double quotes. (read
+your shell man page for more info).
 
 IMPORTANT:
 ----------
@@ -112,4 +119,3 @@ If you still have problems you can contact me.
 
 Laurent
 papier@linuxfan.com
-

@@ -1,11 +1,8 @@
 dnetw:
 - use a shm to communicate to monitoring apps.
 - improve % reading accuracy.
-- support SMP.
-- support for dnetc options.
 - support other Unix system (FreeBSD, ...)
 
 gtkrellm plugin:
 - support SMP.
-- add a led for active/inactive state (as in gtkrelmms).
 - configurable start command.

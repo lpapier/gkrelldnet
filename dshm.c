@@ -1,4 +1,4 @@
-/* $Id: dshm.c,v 1.3 2004-07-17 10:29:34 papier Exp $ */
+/* $Id: dshm.c,v 1.4 2004-09-05 20:43:22 papier Exp $ */
 
 /* a simple tool to dump the dnetw shared memory segment values
 |  Copyright (C) 2000-2003 Laurent Papier
@@ -37,14 +37,14 @@ int main(int argc,char *argv[])
 	int shmid,i;
 	float tmp;
 
-	if((shmid = my_shmget(sizeof(struct dnetc_values),0660)) == -1)
+	if((shmid = my_shmget(sizeof(struct dnetc_values),0444)) == -1)
 	{
-		printf("no shared memory segment\n");
+		perror("error getting shm");
 		exit(-1);
 	}
 	
-	if((int) (shmem = shmat(shmid,0,0)) == -1) {
-		printf("can't attach shared memory segment\n");
+	if((int) (shmem = shmat(shmid,0,SHM_RDONLY)) == -1) {
+		perror("error attaching shm");
 		exit(-1);
 	}
 

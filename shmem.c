@@ -1,4 +1,4 @@
-/* $Id: shmem.c,v 1.6 2004-07-17 10:29:34 papier Exp $ */
+/* $Id: shmem.c,v 1.7 2004-09-05 20:43:22 papier Exp $ */
 
 /*
 |  Copyright (C) 2000-2003 Laurent Papier
@@ -41,7 +41,7 @@ int my_shmcreate(int size, int shmflg)
 	key_t key;
 
 	/* open file SHMKEY_FILE for writing */
-	fd = open(SHMKEY_FILE,O_WRONLY|O_CREAT|O_EXCL,0600);
+	fd = open(SHMKEY_FILE,O_WRONLY|O_CREAT|O_EXCL,0644);
 	if(fd == -1) return -1;
 
 	/* look for a valid key */

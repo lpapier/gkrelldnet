@@ -1,4 +1,4 @@
-/* $Id: gkrelldnet.c,v 1.27 2004-07-17 10:29:34 papier Exp $ */
+/* $Id: gkrelldnet.c,v 1.28 2004-09-05 20:43:22 papier Exp $ */
 
 /* GKrelldnet: a GKrellM plugin to monitor Distributed.net client
 |  Copyright (C) 2000-2003 Laurent Papier
@@ -119,7 +119,7 @@ static void update_dnet2(void)
 	/* if shared memory not attached */
 	if(dnetmon.shmem == NULL)
 	{
-		if((shmid = my_shmget(sizeof(struct dnetc_values),0660)) == -1)
+		if((shmid = my_shmget(sizeof(struct dnetc_values),0444)) == -1)
 			return;
 		
 		if((int) (dnetmon.shmem = shmat(shmid,0,0)) == -1)

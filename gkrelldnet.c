@@ -34,10 +34,10 @@
 static GtkWidget *gkrellm_vbox;
 
 /* gkrellm elements */
-static Monitor  *monitor;
-static Panel	*panel;
-static Decal    *decal_wu;
-static Krell    *krell_percent;
+static GkrellmMonitor  *monitor;
+static GkrellmPanel	*panel;
+static GkrellmDecal    *decal_wu;
+static GkrellmKrell    *krell_percent;
 static gint		style_id;
 static gboolean mouse_in;
 
@@ -109,8 +109,7 @@ static void update_dnet2(void)
 				   && dnetmon.shmem->val_cpu[i] < buf_cpu_val[i])
 				{
 					strcpy(tmp,dnetmon.pck_done_cmd);
-					strcat(tmp," &");
-					system(tmp);
+					g_spawn_command_line_async(tmp, NULL);
 				}
 				/* keep old value */
 				buf_cpu_val[i] = dnetmon.shmem->val_cpu[i];
@@ -293,19 +292,16 @@ static gint cb_button_press(GtkWidget *widget, GdkEventButton *ev)
 
 	/* launch the command */
 	if(ev->button == 1 || ev->button == 2)
-	{
-		strcat(command," &");
-		system(command);
-	}
+		g_spawn_command_line_async(command, NULL);
 
 	return FALSE;
 }
 
 static void create_plugin(GtkWidget *vbox, gint first_create)
 {
-	Style			*style;
-	TextStyle       *ts;
-	GdkImlibImage   *krell_image;
+	GkrellmStyle			*style;
+	GkrellmTextstyle       *ts;
+	GkrellmPiximage   *krell_image;
 	gint y;
 	gchar text[96] = "dnet";
 
@@ -315,7 +311,7 @@ static void create_plugin(GtkWidget *vbox, gint first_create)
 		panel = gkrellm_panel_new0();
 
 	style = gkrellm_meter_style(style_id);
-	krell_image = gkrellm_krell_meter_image(style_id);
+	krell_image = gkrellm_krell_meter_piximage(style_id);
 	ts = gkrellm_panel_textstyle(style_id);
 	panel->textstyle = ts;
 
@@ -351,7 +347,7 @@ static void create_plugin(GtkWidget *vbox, gint first_create)
 
 	/* some scroll init. */
 	separator_len = gdk_string_width(panel->textstyle->font,"   ***   ");
-	gk_width = gkrellm_chart_width() - (2 * style->margin) - 2;
+	gk_width = gkrellm_chart_width() - (style->margin.left + style->margin.right) - 2;
 }
 
 static gchar *plugin_info_text[] = {
@@ -400,9 +396,10 @@ static void create_dnet_tab(GtkWidget *tab)
 {
 	GtkWidget *tabs, *vbox, *hbox;
 	GtkWidget *label, *frame;
-	GtkWidget *scrolled, *text;
+	GtkWidget *text;
 	GtkAdjustment *adj;
 	gchar *about_text = NULL;
+	int i;
 
 	tabs = gtk_notebook_new();
 	gtk_notebook_set_tab_pos(GTK_NOTEBOOK(tabs),GTK_POS_TOP);
@@ -461,16 +458,10 @@ static void create_dnet_tab(GtkWidget *tab)
 	gtk_container_add(GTK_CONTAINER(vbox),hbox);
 
 	/* info */
-	vbox = gkrellm_create_tab(tabs,"Info");
-	scrolled = gtk_scrolled_window_new(NULL, NULL);
-	gtk_scrolled_window_set_policy(GTK_SCROLLED_WINDOW(scrolled),
-			GTK_POLICY_AUTOMATIC, GTK_POLICY_AUTOMATIC);
-	gtk_box_pack_start(GTK_BOX(vbox), scrolled, TRUE, TRUE, 0);
-	text = gtk_text_new(NULL, NULL);
-	gkrellm_add_info_text(text, plugin_info_text,
-			sizeof(plugin_info_text) / sizeof(gchar *));
-	gtk_text_set_editable(GTK_TEXT(text), FALSE);
-	gtk_container_add(GTK_CONTAINER(scrolled), text);
+	vbox = gkrellm_gtk_framed_notebook_page(tabs,"Info");
+	text = gkrellm_gtk_scrolled_text_view(vbox, NULL,GTK_POLICY_AUTOMATIC, GTK_POLICY_AUTOMATIC);
+	for (i = 0; i < sizeof(plugin_info_text)/sizeof(gchar *); i++)
+		gkrellm_gtk_text_view_append(text, _(plugin_info_text[i]));
 	
 	/* about */
 	about_text = g_strdup_printf(
@@ -483,6 +474,7 @@ static void create_dnet_tab(GtkWidget *tab)
 		GKRELLDNET_VERSION);
 	
 	text = gtk_label_new(about_text); 
+	gtk_label_set_justify(GTK_LABEL(text), GTK_JUSTIFY_CENTER);
 	label = gtk_label_new("About");
 	gtk_notebook_append_page(GTK_NOTEBOOK(tabs),text,label);
 	g_free(about_text);
@@ -517,7 +509,7 @@ static void load_config(gchar *arg)
 
 static void apply_config(void)
 {
-	gchar *s;
+	const gchar *s;
 
 	/* update config vars */
 	dnetmon.check_timeout = gtk_spin_button_get_value_as_int(GTK_SPIN_BUTTON(check_timeout_spin_button));
@@ -542,7 +534,7 @@ static void apply_config(void)
 
 /* The monitor structure tells GKrellM how to call the plugin routines.
 */
-static Monitor	plugin_mon	=
+static GkrellmMonitor	plugin_mon	=
 {
 	CONFIG_NAME,        /* Title for config clist.   */
 	0,					/* Id,  0 if a plugin       */
@@ -566,10 +558,10 @@ static Monitor	plugin_mon	=
 };
 
 
-  /* All GKrellM plugins must have one global routine named init_plugin()
+  /* All GKrellM plugins must have one global routine named gkrellm_init_plugin()
   |  which returns a pointer to a filled in monitor structure.
   */
-Monitor *init_plugin()
+GkrellmMonitor *gkrellm_init_plugin()
 {
 	int i;
 

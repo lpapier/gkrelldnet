@@ -8,5 +8,5 @@ First check that there is no other 'dnetw' running. You can only run one 'dnetw'
 Then check that the file '/tmp/dnetw-shmid' do not exist. You can remove it
 only if there is no 'dnetw' running.
 
-If the previous conditions are meet and you are using dnetw v0.9 or less,
-please update gkrelldnet to v0.10 or better.
+If the previous conditions are meet and you are using GkrellDnet v0.9 or less,
+please upgrade to GkrellDnet v0.10 or better.

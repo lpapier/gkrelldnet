@@ -2,7 +2,7 @@
 #ifndef __GKRELLDNET_H__
 #define __GKRELLDNET_H__
 
-#include <gkrellm/gkrellm.h>
+#include <gkrellm2/gkrellm.h>
 
 #define	CONFIG_NAME	"Distributed.net"  /* Name in the configuration window */
 #define CONFIG_KEYWORD "dnet"

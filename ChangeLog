@@ -3,7 +3,7 @@ GKrellM plugin ChangeLog
 
 0.6 Sat Nov 04, 2000
 	* fix: little improvements in the pref GUI layout.
-	* new: configurable command to start on every packet completion.
+	* new: configurable command started on every packet completion.
 	
 0.5 Sun Oct 22, 2000
 	* fix: change krell style.
@@ -26,8 +26,14 @@ GKrellM plugin ChangeLog
 dnetw ChangeLog
 ---------------
 
+0.6.1 Sat Dec 02, 2000
+	* fix: incorrect version number ;-)
+	* new: support for the new log format (dnet client v2.8011 and up)
+	* new: now the '-q' option launch dnetw in background
+	(thanks to Jan Blunck for his patch).
+
 0.6 Sat Nov 04, 2000
-	* fix: 100% completion was reported has 104%.
+	* fix: 100% completion was reported as 104%.
 	* fix: lines about transfert to proxy introduces some wrong value
 	report.
 

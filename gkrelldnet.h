@@ -14,7 +14,6 @@
 #define MY_PLACEMENT (MON_CPU)
 #endif
 
-#define DNET_MAJOR_VERSION 0
-#define DNET_MINOR_VERSION 6
+#define DNET_VERSION "0.6.1"
 
 #endif

@@ -495,13 +495,13 @@ static void create_dnet_tab(GtkWidget *tab)
 	
 	/* about */
 	about_text = g_strdup_printf(
-		"GKrellDnet %d.%d\n" \
+		"GKrellDnet %s\n" \
 		"GKrellM distributed.net Plugin\n\n" \
 		"Copyright (C) 2000 Laurent Papier\n" \
 		"papier@linuxfan.com\n" \
 		"http://gkrelldnet.sourceforge.net/\n\n" \
 		"Released under the GNU Public Licence",
-		DNET_MAJOR_VERSION,DNET_MINOR_VERSION);
+		DNET_VERSION);
 	
 	text = gtk_label_new(about_text); 
 	label = gtk_label_new("About");

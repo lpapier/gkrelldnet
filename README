@@ -56,6 +56,9 @@ then you need to copy the wrapper 'dnetw' somewhere in your path. I choose to
 copy it in the same directory as the distributed.net client and add this
 directory in my path.
 
+It is very important for the plugin to work, that BOTH dnetc and dnetw are in
+your path. Please check your PATH variable.
+
 
 Usage
 =====
@@ -66,8 +69,10 @@ the GKrellM plugin (be sure that the 'dnetc' executable is in your path).
 
 VERY IMPORTANT:
 ---------------
-dnetw only works if you DO NOT redirect the client output to
-a file. The client output MUST be stdout. So check your client configuration.
+dnetw only works if you DO NOT redirect the client output to a file.
+The client output MUST be stdout. So check your client configuration.
+The new absolute style crunch-o-meter is not supported so if you, like me,
+works on OGR force the crunch-o-meter to relative style (read dnetc doc).
 
 If you want to redirect the dnet client to a file you must use the dnetw
 option '-l'.
@@ -85,6 +90,8 @@ ex: dnetw -c "dnetc -numcpu 2" -l dnet.log /tmp/dnetw.log
 this command will force the client to start 2 crunchers.
 NOTE: you must enclose the command line with simple or double quotes. (read
 your shell man page for more info).
+
+Use '-o' option if you use an old version of the client (v2.8010 and older).
 
 IMPORTANT:
 ----------

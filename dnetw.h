@@ -18,13 +18,20 @@ typedef unsigned long long int ulonglong;
 
 /* structure to hold monitored values */
 struct dnetc_values {
+	char running;                /* TRUE if dnetw is running */ 
 	char contest[4];             /* current contest */
-	int cmode;                  /* crun-o-meter mode */
+	int cmode;                   /* crun-o-meter mode */
 	int wu_in;                   /* work unit in input buffer */
 	int wu_out;                  /* work unit in output buffer */
 	int n_cpu;                   /* number of active cruncher */
 	ulonglong val_cpu[MAX_CPU];  /* current cruncher value */
 };
+
+/* I need TRUE/FALSE macros */
+#ifndef TRUE
+#define TRUE 1
+#define FALSE 0
+#endif
 
 #endif
 

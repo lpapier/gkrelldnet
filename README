@@ -23,15 +23,13 @@ GKrellDnet provides
     - monitor input/output work units
     - monitor current contest
     - percentage done in current block/stub
-    - stop the dnet client on right mouse button click
+    - start/stop the dnet client on left/right mouse button click
     - configurable text output
 
 Limitation
 ==========
 * currently only one cpu is supported.
 * see TODO file.
-* I'm sorry, but the current version of dnetw only works when started from the
-  dnetc directory. I will remove this limitation as soon as possible. 
 
 
 Installation
@@ -46,7 +44,9 @@ install the GKrellDnet plugin in ~/.gkrellm/plugins:
 make install
 
 then you need to copy the wrapper 'dnetw' somewhere in your path. I choose to
-copy it in the same directory as the distributed.net client.
+copy it in the same directory as the distributed.net client and add this
+directory in my path.
+
 
 Usage
 =====
@@ -54,8 +54,8 @@ Usage
 First you need to setup your dnet client so that you don't need to use command
 line options. This is a limitation of the wrapper. This limitation will be
 removed in the future.
-Now, you can use the wrapper to start the dnet client (be sure that the
-'dnetc' executable is in your path).
+Now, you can use the wrapper to start the dnet client or you can left click in
+the GKrellM plugin (be sure that the 'dnetc' executable is in your path).
 
 VERY IMPORTANT:
 ---------------

@@ -376,7 +376,7 @@ int main(int argc,char *argv[])
 		contest_offset = 0;
 	}
 
-	if(regcomp(&preg_absolute,"#[0-9]+: [A-Z0-9]{3}:.+\\[[,0-9]+\\]",REG_EXTENDED) != 0)
+	if(regcomp(&preg_absolute,"#[0-9]+: [A-Z0-9-]{3,6}:.+\\[[,0-9]+\\]",REG_EXTENDED) != 0)
 		clean_and_exit(NULL,1);
 	if(regcomp(&preg_cruncher,"[0-9]+.cruncher.*started",REG_EXTENDED) != 0)
 		clean_and_exit(NULL,1);

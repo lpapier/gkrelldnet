@@ -1,3 +1,21 @@
+/* GKrelldnet
+|  Copyright (C) 2000 Laurent Papier
+|
+|  Author:  Laurent Papier    papier@linuxfan.com
+|
+|  This program is free software which I release under the GNU General Public
+|  License. You may redistribute and/or modify this program under the terms
+|  of that license as published by the Free Software Foundation; either
+|  version 2 of the License, or (at your option) any later version.
+|
+|  This program is distributed in the hope that it will be useful,
+|  but WITHOUT ANY WARRANTY; without even the implied warranty of
+|  MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+|  GNU General Public License for more details.
+| 
+|  To get a copy of the GNU General Puplic License, write to the Free Software
+|  Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
+*/
 
 #include <stdio.h>
 #include <stdlib.h>
@@ -23,14 +41,22 @@ static gint		style_id;
 
 /* config widgets */
 static GtkWidget *entry_mon_file,*button_enable,*entry_format_str;
-static gboolean dnet_enable = TRUE;
 
-/* storage for dnet log values */
-static gchar dnet_mon_file[256] = "/tmp/dnetw.mon";
-static gchar dnet_format_string[128] = "$c: $i/$o";
-static gint wu_in, wu_out, cpu_percent;
-static gchar contest[3] = "???";
+typedef struct
+{
+	gboolean enable;                     /* enable plugin */
+	gchar file[256];                     /* monitoring file */
+	gchar format_string[128];            /* output format string */
+	gint wu_in, wu_out, cpu_percent;     /* i/O work units, percent. */
+	gchar contest[3];                    /* current contest */
+} DnetMon;
 
+static DnetMon dnetmon = {
+	TRUE,
+	"/tmp/dnetw.mon", "$c: $i/$o",
+	0, 0, 0,
+	"???"
+};
 
 /*  update dnet values */
 static void update_dnet(void)
@@ -41,16 +67,16 @@ static void update_dnet(void)
 	gint pos;
 
 	/* init. */
-	wu_in = wu_out = 0;
-	cpu_percent = 0;
-	strcpy(contest,"???");
+	dnetmon.wu_in = dnetmon.wu_out = 0;
+	dnetmon.cpu_percent = 0;
+	strcpy(dnetmon.contest,"???");
 
 	/* get file size */
-	if(stat(dnet_mon_file,&buf) == -1)
+	if(stat(dnetmon.file,&buf) == -1)
 		return;
 
 	/* open file for reading */
-	if((fd = fopen(dnet_mon_file,"r")) == NULL)
+	if((fd = fopen(dnetmon.file,"r")) == NULL)
 		return;
 
 	/* seek near the end of file */
@@ -68,7 +94,7 @@ static void update_dnet(void)
 	{	
 		/* read lines */
 		while(fgets(tmp,128,fd) != NULL)
-			sscanf(tmp,"%s %d %d %d %d",contest,&wu_in,&wu_out,&pos,&cpu_percent);
+			sscanf(tmp,"%s %d %d %d %d",dnetmon.contest,&dnetmon.wu_in,&dnetmon.wu_out,&pos,&dnetmon.cpu_percent);
 	}
 
 	fclose(fd);
@@ -79,10 +105,10 @@ static void update_decals_text(void)
 {
 	gchar *s,text[64],buf[12];
 
-	if(contest[0] != '?')
+	if(dnetmon.contest[0] != '?')
 	{
 		text[0] = '\0';
-		for(s=dnet_format_string; *s!='\0'; s++)
+		for(s=dnetmon.format_string; *s!='\0'; s++)
 		{
 			buf[0] = *s;
 			buf[1] = '\0';
@@ -91,24 +117,24 @@ static void update_decals_text(void)
 				switch(*(s+1))
 				{
 					case 'i':
-						snprintf(buf,12,"%d",wu_in);
+						snprintf(buf,12,"%d",dnetmon.wu_in);
 						s++;
 						break;
 					case 'o':
-						snprintf(buf,12,"%d",wu_out);
+						snprintf(buf,12,"%d",dnetmon.wu_out);
 						s++;
 						break;
 					case 'p':
-						snprintf(buf,12,"%d",cpu_percent);
+						snprintf(buf,12,"%d",dnetmon.cpu_percent);
 						s++;
 						break;
 					case 'c':
-						snprintf(buf,12,"%s",contest);
+						snprintf(buf,12,"%s",dnetmon.contest);
 						g_strdown(buf);
 						s++;
 						break;
 					case 'C':
-						snprintf(buf,12,"%s",contest);
+						snprintf(buf,12,"%s",dnetmon.contest);
 						g_strup(buf);
 						s++;
 						break;
@@ -126,12 +152,12 @@ static void update_decals_text(void)
 static void update_krells(void)
 {
 	krell_percent->previous = 0;
-	gkrellm_update_krell(panel, krell_percent, cpu_percent);
+	gkrellm_update_krell(panel, krell_percent, dnetmon.cpu_percent);
 }		
 
 static void update_plugin(void)
 {
-	if(dnet_enable && GK.five_second_tick)
+	if(dnetmon.enable && GK.five_second_tick)
 	{
 		update_dnet();
 		update_decals_text();
@@ -163,7 +189,7 @@ create_plugin(GtkWidget *vbox, gint first_create)
 
 	gkrellm_vbox = vbox;
 
-	if(!dnet_enable)
+	if(!dnetmon.enable)
 		return;
 
 	if (first_create)
@@ -200,12 +226,38 @@ create_plugin(GtkWidget *vbox, gint first_create)
 	gkrellm_draw_layers(panel);
 }
 
+static gchar *plugin_info_text[] = {
+	"<b>GKrellDnet ",
+	"is a GKrellM plugin which allow you to monitor your\n",
+	"distributed.net client. It features:\n\n",
+	"\t- monitoring of work units present in both input and output buffers.\n",
+	"\t- monitoring of percentage done in current block/stub.\n",
+	"\t- monitoring of current contest.\n",
+	"\t- configurable output format.\n\n",
+	"<b>Configuration:\n\n",
+	"<b>\tEnable Distributed.net monitor\n",
+	"\tIf you want to disable this plugin (default: enable).\n\n",
+	"<b>\tFormat String\n",
+	"\tThe text output format is controlled by this string (default: $c : $i / $o).\n",
+	"<b>\t\t$i ",
+	"is the input work units\n",
+	"<b>\t\t$o ",
+	"is the output work units\n",
+	"<b>\t\t$p ",
+	"is the percentage in current block/stub\n",
+	"<b>\t\t$c/$C ",
+	"is the current contest in lowercase/uppercase\n\n",
+	"<b>\tMonitor File\n",
+	"\tSet the file used by the Distributed.net client wrapper 'dnetw' to communicate\n",
+	"\twith monitoring applications (default: /tmp/dnetw.log).\n"
+};
 
 /* configuration tab */
 static void create_dnet_tab(GtkWidget *tab)
 {
 	GtkWidget *tabs, *vbox, *hbox;
 	GtkWidget *label, *frame;
+	GtkWidget *scrolled;
 	GtkWidget *text;
 	gchar *about_text = NULL;
 
@@ -223,14 +275,14 @@ static void create_dnet_tab(GtkWidget *tab)
 	gtk_container_add(GTK_CONTAINER(frame),vbox);
 
 	button_enable = gtk_check_button_new_with_label("Enable Distributed.net monitor");  
-	gtk_toggle_button_set_active(GTK_TOGGLE_BUTTON(button_enable),dnet_enable);
+	gtk_toggle_button_set_active(GTK_TOGGLE_BUTTON(button_enable),dnetmon.enable);
 	gtk_container_add(GTK_CONTAINER(vbox),button_enable);
 
 	hbox = gtk_hbox_new(FALSE, 0);
 	label = gtk_label_new("Format String");
 	gtk_box_pack_start(GTK_BOX(hbox), label, FALSE, FALSE, 4);
 	entry_format_str = gtk_entry_new_with_max_length(127);
-	gtk_entry_set_text(GTK_ENTRY(entry_format_str),dnet_format_string);
+	gtk_entry_set_text(GTK_ENTRY(entry_format_str),dnetmon.format_string);
 	gtk_box_pack_start(GTK_BOX(hbox), entry_format_str, FALSE, FALSE, 4);
 
 	gtk_container_add(GTK_CONTAINER(vbox),hbox);
@@ -238,11 +290,23 @@ static void create_dnet_tab(GtkWidget *tab)
 	label = gtk_label_new("Monitor File");
 	gtk_box_pack_start(GTK_BOX(hbox), label, FALSE, FALSE, 4);
 	entry_mon_file = gtk_entry_new_with_max_length(255);
-	gtk_entry_set_text(GTK_ENTRY(entry_mon_file),dnet_mon_file);
+	gtk_entry_set_text(GTK_ENTRY(entry_mon_file),dnetmon.file);
 	gtk_box_pack_start(GTK_BOX(hbox), entry_mon_file, FALSE, FALSE, 4);
 
 	gtk_container_add(GTK_CONTAINER(vbox),hbox);
 
+	/* info */
+	vbox = create_tab(tabs,"Info");
+	scrolled = gtk_scrolled_window_new(NULL, NULL);
+	gtk_scrolled_window_set_policy(GTK_SCROLLED_WINDOW(scrolled),
+			GTK_POLICY_AUTOMATIC, GTK_POLICY_AUTOMATIC);
+	gtk_box_pack_start(GTK_BOX(vbox), scrolled, TRUE, TRUE, 0);
+	text = gtk_text_new(NULL, NULL);
+	gkrellm_add_info_text(text, plugin_info_text,
+			sizeof(plugin_info_text) / sizeof(gchar *));
+	gtk_text_set_editable(GTK_TEXT(text), FALSE);
+	gtk_container_add(GTK_CONTAINER(scrolled), text);
+	
 	/* about */
 	about_text = g_strdup_printf(
 		"GKrellDnet %d.%d\n" \
@@ -261,9 +325,9 @@ static void create_dnet_tab(GtkWidget *tab)
 
 static void save_config(FILE *f)
 {
-	fprintf(f,"%s enable %d\n",CONFIG_KEYWORD,dnet_enable);
-	fprintf(f,"%s logfile %s\n",CONFIG_KEYWORD,dnet_mon_file);
-	fprintf(f,"%s format_string %s\n",CONFIG_KEYWORD,dnet_format_string);
+	fprintf(f,"%s enable %d\n",CONFIG_KEYWORD,dnetmon.enable);
+	fprintf(f,"%s logfile %s\n",CONFIG_KEYWORD,dnetmon.file);
+	fprintf(f,"%s format_string %s\n",CONFIG_KEYWORD,dnetmon.format_string);
 }
 
 static void load_config(gchar *arg)
@@ -273,11 +337,11 @@ static void load_config(gchar *arg)
 	if(sscanf(arg,"%s %[^\n]",config,item) != 2 ) return ; 
 
 	if(!strcmp("enable",config))
-		sscanf(item,"%d",&dnet_enable);
+		sscanf(item,"%d",&dnetmon.enable);
 	else if(!strcmp("logfile",config))
-		strcpy(dnet_mon_file,item);
+		strcpy(dnetmon.file,item);
 	else if(!strcmp("format_string",config))
-		strcpy(dnet_format_string,item);
+		strcpy(dnetmon.format_string,item);
 }
 
 static void apply_config(void)
@@ -285,11 +349,11 @@ static void apply_config(void)
 	gchar *s;
 
 	/* update config vars */
-	dnet_enable = GTK_TOGGLE_BUTTON(button_enable)->active;
+	dnetmon.enable = GTK_TOGGLE_BUTTON(button_enable)->active;
 	s = gtk_entry_get_text(GTK_ENTRY(entry_mon_file));
-	strcpy(dnet_mon_file,s);
+	strcpy(dnetmon.file,s);
 	s = gtk_entry_get_text(GTK_ENTRY(entry_format_str));
-	strcpy(dnet_format_string,s);
+	strcpy(dnetmon.format_string,s);
 
 	/* delete old panel */
 	if(panel != NULL)

@@ -9,3 +9,4 @@ gtkrellm plugin:
 - add a led for active/inactive state (as in gtkrelmms).
 - left button start/stop dnet client (configurable command line)
 - info page
+- user configurable delay between update

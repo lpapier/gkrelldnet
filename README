@@ -2,11 +2,79 @@
 Copyright (c) 2000 by Laurent Papier.  This program is free software
 which I release under the GNU General Public License.
 
-gkrelldnet is a monitoring system for Distributed.net client (see
-www.distributed.net).
+Description
+===========
+gkrelldnet is a monitoring system for Distributed.net client.
 
-To be able to monitor the client progression, you first need to start the dnet
-client with my dnet wrapper 'dnetw'.
+Requirements
+============
+a Linux system (the wrapper will only work on Linux system but can be ported
+to other Unix system).
+a working Distributed.net client (see http://www.distributed.net/).
+GKrellM multi monitor app. (see http://gkrellm.net).
+
+
+GKrellDnet Features
+===================
+* a distibuted.net client wrapper to make it possible to write monitoring
+  applets.
+* a GKrellM plugin. Monitor input/output work units, current contest,
+  percentage done in current block/stub. (see 'Info' in plugin config.).
+
+Limitation
+==========
+* currently only one cpu supported.
+* see TODO file.
+
+
+Installation
+============
+compile both the dnet wrapper 'dnetw' and the GKrellDnet plugin:
+
+tar xvfI gkrelldnet-X.Y.tar.bz2
+cd gkrelldnet-X.Y
+make
+
+install the GKrellDnet plugin in ~/.gkrellm/plugins:
+make install
+
+then you need to copy the wrapper 'dnetw' somewhere in your path. I choose to
+copy it in the same directory as the distributed.net client.
+
+
+Usage
+=====
+
+First you need to setup your dnet client so that you don't need to use command
+line options. This is a limitation of the wrapper. This limitation will be
+removed in the future.
+Now, you can use the wrapper to start the dnet client (be sure that the
+'dnetc' executable is in your path).
+
+VERY IMPORTANT:
+---------------
+dnetw only works if you DO NOT redirect the client output to
+a file. The client output MUST be stdout.
+
+If you want to redirect the dnet client to a file you must use the dnetw
+option '-l'.
+
+ex: dnetw -l dnet.log /tmp/dnetw.log
+this command will monitor the dnet client in /tmp/dnetw.log and
+redirect the client output to dnet.log.
+
+ex: dnetw /tmp/dnetw.log
+this command will monitor the dnet client in /tmp/dnetw.log file and
+print the client output on your terminal.
+
+IMPORTANT:
+----------
+Be sure that the file used to monitor the client is the same as the one used
+in the monitoring app (GKrellDnet plugin).
+
+
+How does the wrapper work ?
+===========================
 This wrapper will write activity information in a file. The last line of this
 file contain the most recent information.
 The line format is (ASCII text):
@@ -14,6 +82,7 @@ current contest
 work units in input buffer
 work units in output buffer
 number of cpu
+percentage for cpu 0
 percentage for cpu 1
 ...
 
@@ -22,27 +91,20 @@ RC5 contest, 24 work units in input buffer, 2 in output buffer, 1 cpu and
 45% done in current packet.
 ex (2 cpu): OGR 12 8 2 24 78
 OGR contest, 12 work units in input buffer, 8 in output buffer, 2 cpu and
-24% done in current packet for cpu0, 78% for cpu1.
-
-IMPORTANT: currently only one cpu supported.
-VERY IMPORTANT: dnetw only works if you DO NOT redirect the client output to
-a file. The client output MUST be stdout.
-The wrapper can redirect the output with the 'l' option.
-
-ex: dnetw -l dnet.log /tmp/dnet_monitor_file
-this command will monitor the dnet client in /tmp/dnet_monitor_file and
-redirect the client output to dnet.log.
-
-ex: dnetw /tmp/dnet_monitor.log
-this command will monitor the dnet client in /tmp/dnet_monitor.log file and
-print the client output on your terminal.
+24% done in current stub for cpu0, 78% for cpu1.
 
 
-I have start writing a gkrellm plugin to monitor the dnetw output. But you can write your own monitoring applet (WindowMaker Dock, Gnome/KDE applets or
-epplets), I will only work on the wrapper dnetw and the gkrellm plugin.
+Misc.
+=====
+I have start writing a gkrellm plugin to monitor the dnetw output. But you can
+write your own monitoring applet (WindowMaker Dock, Gnome/KDE applets or
+epplets), I will only work on the wrapper 'dnetw' and the gkrellm plugin.
 
-Sorry, for the moment you only have this ugly README and no web site, but
-both the wrapper and the plugin seems stable.
+Sorry, no web site for the moment :(
+
+Both the wrapper and the plugin seems stable.
+If you have problems, first check installation and usage section of this file.
+If you still have problems you can contact me.
 
 Laurent
 papier@linuxfan.com

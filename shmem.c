@@ -1,5 +1,5 @@
 /*
-|  Copyright (C) 2000-2001 Laurent Papier
+|  Copyright (C) 2000-2002 Laurent Papier
 |
 |  Author:  Laurent Papier <papier@tuxfan.net>
 |

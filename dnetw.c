@@ -32,7 +32,7 @@
 
 #define MASTER_PTY "/dev/ptmx"
 
-static int dflag = 0;
+static int dflag = 0, qflag = 0;
 
 /* pid of the dnet client */
 static 	pid_t fils;
@@ -87,17 +87,53 @@ static void got_signal(int signum)
 	if(kill(fils,SIGQUIT) == -1)
 		clean_and_exit("kill",1);
 
-	while((lu = read(fd,buf,128)) > 0)
+	if(!qflag)
 	{
-		buf[lu] = '\0';
-		printf("%s",buf);
+		while((lu = read(fd,buf,128)) > 0)
+		{
+			buf[lu] = '\0';
+			printf("%s",buf);
+		}
 	}
 	clean_and_exit(NULL,0);
 }
 
+/* change to dnetc directory: dnetc must be in the path */
+static void change_dir(void)
+{
+	char path[1024],*tmp,file[512];
+	struct stat st;
+
+	/* get path */
+	strcpy(path,getenv("PATH"));
+	if(path != NULL)
+	{
+		/* first token */
+		tmp = strtok(path,":");
+		while(tmp != NULL)
+		{
+			strcpy(file,tmp);
+			strcat(file,"/dnetc");
+			/* file exist ? */
+			if(stat(file,&st) != -1 && S_ISREG(st.st_mode)
+			   && (st.st_mode & S_IXUSR))
+			{
+				/* dir. found */
+				if(chdir(tmp) == 0)
+					return;
+			}
+			/* next token */
+			tmp = strtok(NULL,":");
+		}
+	}
+}
+	
 static void usage(char *pname)
 {
-	fprintf(stderr,"usage: %s [-l log_file] [-n cpu] <monitor_file>\n",pname);
+	fprintf(stderr,"Distributed.net client wrapper 0.2\n");
+	fprintf(stderr,"usage: %s [-q] [-l<log_file>] <monitor_file>\n",pname);
+	fprintf(stderr," -q: disable terminal output\n");
+	fprintf(stderr," -l<log_file>: redirect client output in <log_file>\n");
 	clean_and_exit(NULL,0);
 }
 
@@ -119,12 +155,15 @@ int main(int argc,char *argv[])
 	int wu_in = 0,wu_out = 0;
 
 	/* check arguments */
-	while ((ch = getopt(argc, argv, "dl:n:")) != -1)
+	while ((ch = getopt(argc, argv, "hdql:n:")) != -1)
 	{
 		switch(ch)
 		{
 			case 'd':
 				dflag = 1;
+				break;
+			case 'q':
+				qflag = 1;
 				break;
 			case 'n':
 				n_cpu = atoi(optarg);
@@ -194,6 +233,8 @@ int main(int argc,char *argv[])
 
 	if(fils == 0)
 	{
+		/* change to dnetc directory */
+		change_dir();
 		/* start dnet client */
 		if(dup2(tty_fd,1) == -1)
 			clean_and_exit("dup2",1);
@@ -232,7 +273,7 @@ int main(int argc,char *argv[])
 			}
 			if(dflag)
 				fprintf(stderr,"\n");
-			if(ttylog)
+			if(ttylog && !qflag)
 			{
 				printf("%s",buf); fflush(stdout);
 			}
@@ -246,7 +287,8 @@ int main(int argc,char *argv[])
 			else if(regexec(&preg_contest,buf,1,pmatch,0) == 0)
 				strncpy(contest,&buf[pmatch[0].rm_so+7],3);
 
-			printf("%s",buf);
+			if(!qflag)
+				printf("%s",buf);
 		}
 
 		/* monitor output */

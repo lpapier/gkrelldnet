@@ -1,7 +1,11 @@
 dnetw:
+- better support for the new log format
+- better readme usage section
+- support the new absolute style crunch-o-meter
 - support other Unix system (FreeBSD, ...)
 
 gtkrellm plugin:
+- support the new absolute style crunch-o-meter
 - support for multiple local/remote client monitoring
 - support for perproxy monitoring
 

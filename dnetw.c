@@ -30,11 +30,14 @@
 #include <string.h>
 
 
+#define BUF_SIZE 256
 #define MASTER_PTY "/dev/ptmx"
 
 static int dflag = 0, qflag = 0;
 
 
+/* pid of the daemon */
+static pid_t new_pid;
 /* pid of the dnet client */
 static 	pid_t fils;
 static	char **nargv = NULL;
@@ -91,7 +94,7 @@ static void clean_and_exit(char *text,int r)
 /* signal handler */
 static void got_signal(int signum)
 {
-	char buf[128];
+	char buf[BUF_SIZE];
 	int lu;
 
 	if(signum == SIGCHLD)
@@ -104,7 +107,7 @@ static void got_signal(int signum)
 
 	if(!qflag)
 	{
-		while((lu = read(fd,buf,128)) > 0)
+		while((lu = read(fd,buf,BUF_SIZE)) > 0)
 		{
 			buf[lu] = '\0';
 			printf("%s",buf);
@@ -182,7 +185,7 @@ int get_arg(char ***args, char *str)
 /* a fgets for int fd */
 int mygets(int fd,char *buf,int count)
 {
-	static char tmp[256] = "";
+	static char tmp[2*BUF_SIZE] = "";
 	char *t = NULL;
 	int s,p;
 	int i = 0;
@@ -200,7 +203,9 @@ int mygets(int fd,char *buf,int count)
 			buf[p] = '\0';
 			t = strchr(buf,'\n');
 		}
-		while(s > 0 && t == NULL && buf[0] != 0x0d);
+		while(s > 0 && t == NULL && buf[0] != 0x0d
+			  && buf[0] != '/' && buf[0] != '|'
+			  && buf[0] != '-' && buf[0] != '\\');
 	}
 
 	if(t != NULL)
@@ -217,9 +222,10 @@ int mygets(int fd,char *buf,int count)
 
 static void usage(char *pname)
 {
-	fprintf(stderr,"Distributed.net client wrapper 0.4\n");
+	fprintf(stderr,"Distributed.net client wrapper 0.6.1\n");
 	fprintf(stderr,"usage: %s [-q] [-l<file>] [-c<cmd>] <monitor_file>\n",pname);
-	fprintf(stderr," -q: disable all terminal output\n");
+	fprintf(stderr," -q: disable all terminal output and run in background\n");
+	fprintf(stderr," -o: old log format (dnetc v2.8010 and prior)\n");
 	fprintf(stderr," -l<log_file>: redirect the client output in <file>\n");
 	fprintf(stderr," -c<cmd>: use <cmd> to start the dnetc client (default: 'dnetc')\n");
 	clean_and_exit(NULL,0);
@@ -231,8 +237,11 @@ int main(int argc,char *argv[])
 	extern int optind;
 	int ch;
 
+	int oflag = 0;
+	int contest_offset;
+
 	char *ttydev,*tmp;
-	char buf[128],buf1[64],buf2[16];
+	char buf[BUF_SIZE],buf1[64],buf2[16];
 	int ttylog,lu,i,q;
 
 	regmatch_t pmatch[2];
@@ -243,12 +252,15 @@ int main(int argc,char *argv[])
 	int wu_in = 0,wu_out = 0;
 
 	/* check arguments */
-	while ((ch = getopt(argc, argv, "hdql:c:")) != -1)
+	while ((ch = getopt(argc, argv, "hdoql:c:")) != -1)
 	{
 		switch(ch)
 		{
 			case 'd':
 				dflag = 1;
+				break;
+			case 'o':
+				oflag = 1;
 				break;
 			case 'q':
 				qflag = 1;
@@ -276,24 +288,51 @@ int main(int argc,char *argv[])
 	if(strcmp(logfile,"stdout") != 0)
 	{
 		if((log_fd = open(logfile, O_CREAT|O_WRONLY|O_APPEND, S_IRUSR|S_IWUSR|S_IRGRP|S_IROTH)) == -1)
-		clean_and_exit("open logfile",1);
+			clean_and_exit("open logfile",1);
 		if(dup2(log_fd,1) == -1)
 			clean_and_exit("dup2",1);
 	}
 	ttylog = isatty(1);
 
 	/* precompile regex */
-	if(regcomp(&preg_in,"[0-9]+.work.unit.*buff-in",REG_EXTENDED) != 0)
-		clean_and_exit(NULL,1);
-	if(regcomp(&preg_out,"[0-9]+.work.unit.*buff-out",REG_EXTENDED) != 0)
-		clean_and_exit(NULL,1);
-	if(regcomp(&preg_contest,"Loaded.[A-Z0-9]{3}.",REG_EXTENDED) != 0)
-		clean_and_exit(NULL,1);
+	if(oflag)
+	{
+		if(regcomp(&preg_in,"[0-9]+.work.unit.*buff-in",REG_EXTENDED) != 0)
+			clean_and_exit(NULL,1);
+		if(regcomp(&preg_out,"[0-9]+.work.unit.*buff-out",REG_EXTENDED) != 0)
+			clean_and_exit(NULL,1);
+		if(regcomp(&preg_contest,"Loaded.[A-Z0-9]{3}.",REG_EXTENDED) != 0)
+			clean_and_exit(NULL,1);
+		if(regcomp(&preg_proxy,"(Retrieved|Sent).+work.unit",REG_EXTENDED) !=0)
+			clean_and_exit(NULL,1);
+
+		contest_offset = 7;
+	}
+	else
+	{
+		if(regcomp(&preg_in,"[0-9]+.packets?.+remains?.in",REG_EXTENDED) != 0)
+			clean_and_exit(NULL,1);
+		if(regcomp(&preg_out,"[0-9]+.packets?.+in.buff-out",REG_EXTENDED) != 0)
+			clean_and_exit(NULL,1);
+		if(regcomp(&preg_contest,"[A-Z0-9]{3}:.Loaded",REG_EXTENDED) != 0)
+			clean_and_exit(NULL,1);
+		if(regcomp(&preg_proxy,"((Retrieved|Sent).+(stat..unit|packet)|Attempting.to.resolve|Connect(ing|ed).to)",REG_EXTENDED) !=0)
+			clean_and_exit(NULL,1);
+
+		contest_offset = 0;
+	}
+
 	if(regcomp(&preg_cruncher,"[0-9]+.cruncher.*started",REG_EXTENDED) != 0)
 		clean_and_exit(NULL,1);
-	if(regcomp(&preg_proxy,"(Retrieved|Sent).+work.unit",REG_EXTENDED) !=0)
-		clean_and_exit(NULL,1);
 	regex_flag = 1;
+
+	/* continue in background if in quiet mode */
+	if(qflag == 1 && ((new_pid = fork()) != 0)) {
+		if(new_pid < 0)
+			clean_and_exit("forking daemon",1);
+		else
+			exit(0);
+	}
 
 	/* first get a tty */
 	if((fd = open(MASTER_PTY, O_RDWR)) == -1)
@@ -338,8 +377,11 @@ int main(int argc,char *argv[])
 	   || signal(SIGTERM,got_signal) == SIG_ERR)
 		clean_and_exit("signal",1);
 
-	while((lu = mygets(fd,buf,128)) > 0)
+	while((lu = mygets(fd,buf,BUF_SIZE)) > 0)
 	{
+		if(dflag)
+			fprintf(stderr,"buf[0] = %x\n<--\n%s\n-->\n",buf[0],buf);
+
 		if(percent_cpu != NULL && (buf[1] == '.' || buf[lu-1] != '\n'))
 		{
 			if(dflag)
@@ -383,7 +425,7 @@ int main(int argc,char *argv[])
 			if(regexec(&preg_out,buf,1,pmatch,0) == 0)
 				wu_out = strtol(&buf[pmatch[0].rm_so],NULL,10);
 			if(regexec(&preg_contest,buf,1,pmatch,0) == 0)
-				strncpy(contest,&buf[pmatch[0].rm_so+7],3);
+				strncpy(contest,&buf[pmatch[0].rm_so+contest_offset],3);
 			if(percent_cpu == NULL
 			   && regexec(&preg_cruncher,buf,1,pmatch,0) == 0)
 			{

@@ -49,6 +49,7 @@ static int mon_fd = -1;
 /* regex */
 static int regex_flag = 0;
 static regex_t preg_in, preg_out, preg_contest, preg_cruncher;
+static regex_t preg_proxy;
 
 
 /* clean exit function */
@@ -72,6 +73,7 @@ static void clean_and_exit(char *text,int r)
 	{
 		regfree(&preg_in); regfree(&preg_out);
 		regfree(&preg_contest); regfree(&preg_cruncher);
+		regfree(&preg_proxy);
 	}
 	if(mon_fd != -1)
 	{
@@ -289,6 +291,8 @@ int main(int argc,char *argv[])
 		clean_and_exit(NULL,1);
 	if(regcomp(&preg_cruncher,"[0-9]+.cruncher.*started",REG_EXTENDED) != 0)
 		clean_and_exit(NULL,1);
+	if(regcomp(&preg_proxy,"(Retrieved|Sent).+work.unit",REG_EXTENDED) !=0)
+		clean_and_exit(NULL,1);
 	regex_flag = 1;
 
 	/* first get a tty */
@@ -358,7 +362,7 @@ int main(int argc,char *argv[])
 			}
 			if(dflag)
 				fprintf(stderr,"\n");
-			if(ttylog && !qflag)
+			if(!qflag && (ttylog || regexec(&preg_proxy,buf,1,pmatch,0) == 0))
 			{
 				printf("%s",buf); fflush(stdout);
 			}
@@ -382,7 +386,6 @@ int main(int argc,char *argv[])
 				if((pos_cpu = (int *) calloc(n_cpu,sizeof(int))) == NULL)
 					clean_and_exit("calloc",1);
 			}
-
 
 			if(!qflag)
 			{

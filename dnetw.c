@@ -49,7 +49,6 @@ static  int nargc;
 /* tty file descriptor */
 static int fd = -1, tty_fd = -1;
 /* monitor file fd */
-static char monfile[128] = "";
 static int shmid;
 static struct dnetc_values *shmem = NULL;
 /* regex */
@@ -253,7 +252,7 @@ int mygets(int fd,char *buf,int count)
 static void usage(char *pname)
 {
 	fprintf(stderr,"Distributed.net client wrapper %s\n",GKRELLDNET_VERSION);
-	fprintf(stderr,"usage: %s [-q] [-l<file>] [-c<cmd>] <monitor_file>\n",pname);
+	fprintf(stderr,"usage: %s [-q] [-o] [-l<file>] [-c<cmd>]\n",pname);
 	fprintf(stderr," -q: disable all terminal output and run in background\n");
 	fprintf(stderr," -o: old log format (dnetc v2.8010 and lower)\n");
 	fprintf(stderr," -l<log_file>: redirect the client output to <file>\n");
@@ -305,10 +304,8 @@ int main(int argc,char *argv[])
 				usage(argv[0]);
 		}
 	}
-	if(argc - optind != 1)
+	if(argc - optind != 0)
 		usage(argv[0]);
-	/* get monitor filename */
-	strcpy(monfile,argv[argc-1]);
 
 	/* continue in background if in quiet mode */
 	if(qflag == 1 && ((new_pid = fork()) != 0))
@@ -334,7 +331,7 @@ int main(int argc,char *argv[])
 	ttylog = isatty(1);
 
 	/* creat shared memory segment */
-	if((shmid = my_shmget(monfile,sizeof(struct dnetc_values),IPC_CREAT|IPC_EXCL|0660)) == -1)
+	if((shmid = my_shmget(NULL,sizeof(struct dnetc_values),IPC_CREAT|IPC_EXCL|0660)) == -1)
 		clean_and_exit("shmget",1);
 	if((int) (shmem = shmat(shmid,0,0)) == -1)
 		clean_and_exit("shmat",1);

@@ -1,6 +1,9 @@
 GKrellM plugin ChangeLog
 ------------------------
 
+0.13 Fri Aug 15, 2003
+	* nop ;-)
+	
 0.12.1 Mon Jan 13, 2003
 	* fix: problem with RC5-72 and absolute crunch-o-meter style.
 	
@@ -12,7 +15,7 @@ GKrellM plugin ChangeLog
 
 0.10 Sat Apr 27, 2002
 	* chg: the shared memory segment key is dynamic.
-	That should prevent problems encountered by some users.
+	This should prevent problems encountered by some users.
 	
 0.9 Sun Sep 02, 2001
 	* chg: ported to GKrellM 1.2.x plugin API.
@@ -58,6 +61,9 @@ GKrellM plugin ChangeLog
 dnetw ChangeLog
 ---------------
 
+0.13 Fri Aug 15, 2003
+	* new: use openpty for FreeBSD support and possibly other *BSD.
+	
 0.12.1 Mon Jan 13, 2003
 	* fix: problem with RC5-72 and absolute crunch-o-meter style.
 

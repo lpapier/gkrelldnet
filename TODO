@@ -1,6 +1,6 @@
 dnetw:
 - support for the 'live-rate' crunch-o-meter style.
-- support other Unix system (FreeBSD, ...)
+- support other Unix system (NetBSD, OpenBSD, OS X, ...)
 
 gtkrellm plugin:
 - support for multiple local/remote client monitoring

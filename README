@@ -12,7 +12,7 @@ Requirements
 * a Linux system with kernel support for Unix 98 (the wrapper will only work
   on Linux system but can be ported to other Unix system).
 * a working Distributed.net client (see http://www.distributed.net/).
-* GKrellM multi-monitor app (0.10.0 or better) (see http://gkrellm.net/).
+* GKrellM multi-monitor app (1.2.0 or better) (see http://gkrellm.net/).
 
 
 GKrellDnet provides
@@ -30,8 +30,8 @@ GKrellDnet provides
     - monitor the crunch-o-meter (support both relative and absolute style)
     - start/stop the dnet client on left/right mouse button click
     - user configurable text output
-    - user configurable command to start on every packet completion (like play
-      a sound
+    - user configurable command to start on every packet completion
+	(like playing a sound)
 
 Limitation
 ==========
@@ -50,7 +50,7 @@ tar xvfz gkrelldnet-X.Y.tar.gz
 cd gkrelldnet-X.Y
 make
 
-To install the GKrellDnet plugin in ~/.gkrellm/plugins:
+To install the GKrellDnet plugin in ~/.gkrellm/plugins
 make install
 
 then you need to copy the wrapper 'dnetw' somewhere in your path. I choose to
@@ -107,7 +107,7 @@ Starting from v0.9, the dnetw command line is no longer compatible with
 previous version. You need to remove the <monitor file> argument from your
 command line. If you start dnetw from the GKrellDnet plugin no change is need.
 
-
+ 
 How does the wrapper work ?
 ===========================
 This wrapper will write activity information in a file. The last line of this
@@ -137,7 +137,7 @@ I have start writing a gkrellm plugin to monitor the dnetw output. But you can
 write your own monitoring applet (WindowMaker Dock, Gnome/KDE applets or
 epplets), I will only work on the wrapper 'dnetw' and the gkrellm plugin.
 
-Both the wrapper and the plugin seem stable on my system (RedHat 7.0).
+Both the wrapper and the plugin seem stable on my system (RedHat 7.2).
 If you have problems, first check installation and usage section of this file.
 If you still have problems you can contact me.
 

@@ -17,23 +17,75 @@
 |  Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
 */
 
-
+#include <sys/types.h>
+#include <sys/stat.h>
+#include <fcntl.h>
+#include <unistd.h>
 #include <sys/ipc.h>
 #include <sys/shm.h>
 
 
+/* filename with shared memory key */
+#define SHMKEY_FILE "/tmp/dnetw-shmid"
+
 /*-------------------------------------------------------------
-  - a wrapper to shmget and shmat
-  - use a string to generate the memory segment key.
+  - a wrapper to shmget and shmat. Create a new shared memory segment
+  - and write the key in a file.
   -------------------------------------------------------------
   -*/
-int my_shmget(char *text, int size, int shmflg)
+int my_shmcreate(int size, int shmflg)
 {
+	int i,fd,shmid;
 	key_t key;
 
-	/* generate key */
-	key = (key_t) 0x1e240;
-	
+	/* open file SHMKEY_FILE for writing */
+	fd = open(SHMKEY_FILE,O_WRONLY|O_CREAT|O_EXCL,0600);
+	if(fd == -1) return -1;
+
+	/* look for a valid key */
+	key = (key_t) 0x16fc452; i = 0;
+	while((shmid = shmget(key,size,shmflg)) == -1 && i < 20) {
+		i++; key += 6*i;
+	}
+
+	/* write the key in file */
+	if(shmid != -1)
+		write(fd,&key,sizeof(key_t));
+	close(fd);
+
+	/* return shmid */
+	return shmid;
+}
+
+/*-------------------------------------------------------------
+  - a wrapper to shmget and shmat. Try to open a already existing
+  - shared memory segment. Read the key in a file.
+  -------------------------------------------------------------
+  -*/
+int my_shmget(int size, int shmflg)
+{
+	int fd,n;
+	key_t key;
+
+	/* read the key from SHMKEY_FILE */
+	fd = open(SHMKEY_FILE,O_RDONLY);
+	if(fd == -1) return -1;
+	n = read(fd,&key,sizeof(key_t));
+	close(fd);
+
 	/* call shmget */
-	return shmget(key,size,shmflg);
+	if(n != -1)
+		return shmget(key,size,shmflg);
+	else
+		return -1;
+}
+
+/*--------------------------------------------------
+  - Remove the file SHMKEY_FILE
+  --------------------------------------------------
+  -*/
+void my_shmdel(int shmid)
+{
+	shmctl(shmid, IPC_RMID, 0);
+	unlink(SHMKEY_FILE);
 }

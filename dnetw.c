@@ -1,4 +1,4 @@
-/* $Id: dnetw.c,v 1.23 2004-07-17 10:29:34 papier Exp $ */
+/* $Id: dnetw.c,v 1.24 2004-09-05 20:43:22 papier Exp $ */
 
 /* dnetw: a distributed.net client wrapper
 |  Copyright (C) 2000-2003 Laurent Papier
@@ -342,9 +342,9 @@ int main(int argc,char *argv[])
 	ttylog = isatty(1);
 
 	/* creat shared memory segment */
-	if((shmid = my_shmcreate(sizeof(struct dnetc_values),IPC_CREAT|IPC_EXCL|0660)) == -1)
+	if((shmid = my_shmcreate(sizeof(struct dnetc_values),IPC_CREAT|IPC_EXCL|0644)) == -1)
 		clean_and_exit("shmget",1);
-	if((int) (shmem = shmat(shmid,0,0)) == -1)
+	if((int) (shmem = shmat(shmid,0,SHM_RDONLY)) == -1)
 		clean_and_exit("shmat",1);
 
 	/* init shared memory content */

@@ -1,6 +1,9 @@
 GKrellM plugin ChangeLog
 ------------------------
 
+0.14.1 Sun Sep  5, 2004
+	* new: running dnetw and gkrellm as different user is now possible.
+	
 0.14 Sat Jul 17, 2004
 	* new: each cpu has is own krell (patch from Christoph Hohmann).
 	
@@ -63,6 +66,9 @@ GKrellM plugin ChangeLog
 
 dnetw ChangeLog
 ---------------
+	
+0.14.1 Sun Sep  5, 2004
+	* new: running dnetw and gkrellm as different user is now possible.
 
 0.14 Sat Jul 17, 2004
 	* none.

@@ -3,6 +3,8 @@
 |
 |  Author:  Laurent Papier    papier@tuxfan.net
 |
+| $Id: dnetw.c,v 1.22 2003-08-15 15:52:26 papier Exp $
+|
 |  This program is free software which I release under the GNU General Public
 |  License. You may redistribute and/or modify this program under the terms
 |  of that license as published by the Free Software Foundation; either
@@ -30,6 +32,15 @@
 #include <stdlib.h>
 #include <unistd.h>
 #include <string.h>
+
+/* openpty include file(s) */
+#if defined(__linux__)
+#include <pty.h>
+#else
+#include <sys/ioctl.h>
+#include <termios.h>
+#include <libutil.h>
+#endif
 
 #include "shmem.h"
 #include "dnetw.h"
@@ -269,7 +280,7 @@ int main(int argc,char *argv[])
 	int oflag = 0;
 	int contest_offset;
 
-	char *ttydev,*tmp;
+	char *tmp;
 	char buf[BUF_SIZE];
 	int ttylog,lu,i,q;
 
@@ -382,18 +393,9 @@ int main(int argc,char *argv[])
 		clean_and_exit(NULL,1);
 	regex_flag = 1;
 
-	/* first get a tty */
-	if((fd = open(MASTER_PTY, O_RDWR)) == -1)
-		clean_and_exit("open pty",1);
-
-	grantpt(fd);
-	unlockpt(fd);
-	if((ttydev = (char *)ptsname(fd)) == NULL)
-		clean_and_exit("ptsname",1);
-
-	/* open the slave tty */
-	if((tty_fd = open(ttydev, O_RDWR)) == -1)
-		clean_and_exit("open tty",1);
+	/* obtain a pseudo-terminal */
+	if((openpty(&fd,&tty_fd,NULL,NULL,NULL)) == -1)
+		clean_and_exit("openpty",1);
 
 	/* start dnet client and start reading tty */
 	if((fils = fork()) == -1)

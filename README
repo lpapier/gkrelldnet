@@ -1,5 +1,5 @@
 
-Copyright (c) 2000-2002 by Laurent Papier.  This program is free software
+Copyright (c) 2000-2003 by Laurent Papier.  This program is free software
 which I release under the GNU General Public License.
 
 Description
@@ -108,29 +108,6 @@ previous version. You need to remove the <monitor file> argument from your
 command line. If you start dnetw from the GKrellDnet plugin no change is need.
 
  
-How does the wrapper work ?
-===========================
-This wrapper will write activity information in a file. The last line of this
-file contain the most recent information.
-The line format is (ASCII text):
-current contest
-crunch-o-meter style (1 = absolute, 2 = relative)
-work units in input buffer
-work units in output buffer
-number of cpu
-value for cpu 0
-value for cpu 1
-...
-
-ex (1 cpu): RC5 2 24 2 1 45
-RC5 contest, 24 work units in input buffer, 2 in output buffer, 1 cpu and
-45% done in current packet (relative crunch-o-meter).
-ex (2 cpu): OGR 1 12 8 2 167112859822 23049650
-OGR contest, 12 work units in input buffer, 8 in output buffer, 2 cpu and
-167 Gnodes done on CPU #1 and 23 Mnodes done on CPU #2 (absolute
-crunch-o-meter)
-
-
 Open source make it possible
 ============================
 I have start writing a gkrellm plugin to monitor the dnetw output. But you can

@@ -1,8 +1,8 @@
 dnetw:
-- use a shm to communicate to monitoring apps.
-- improve % reading accuracy.
 - support other Unix system (FreeBSD, ...)
 
 gtkrellm plugin:
-- nicer support for SMP and multi-processor system.
+- support for multiple local/remote client monitoring
+- support for perproxy monitoring
+
 

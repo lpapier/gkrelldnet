@@ -233,7 +233,7 @@ int main(int argc,char *argv[])
 
 	char *ttydev,*tmp;
 	char buf[128],buf1[64],buf2[16];
-	int ttylog,lu,i;
+	int ttylog,lu,i,q;
 
 	regmatch_t pmatch[2];
 
@@ -345,24 +345,33 @@ int main(int argc,char *argv[])
 			if(dflag)
 				fprintf(stderr,"lu: %02d, ",lu);
 
-			for(i=0;i<n_cpu;i++)
+			/* a line with proxy comm. */
+			q = regexec(&preg_proxy,buf,1,pmatch,0);
+			if(q != 0)
 			{
-				if(n_cpu != 1)
+				for(i=0;i<n_cpu;i++)
 				{
-					p[0] = 'a' + i;
-					if((tmp = strstr(buf,p)) != NULL)
-						pos_cpu[i] = tmp - buf;
-				}
-				else
-					pos_cpu[i] = lu - 1;
+					if(n_cpu != 1)
+					{
+						p[0] = 'a' + i;
+						if((tmp = strstr(buf,p)) != NULL)
+							pos_cpu[i] = tmp - buf;
+					}
+					else
+						pos_cpu[i] = lu - 1;
+					
+					percent_cpu[i] = (pos_cpu[i] - (pos_cpu[i]/8)*3) * 2;
+					if(percent_cpu[i] > 100)
+						percent_cpu[i] = 100;
 
-				percent_cpu[i] = (pos_cpu[i] - (pos_cpu[i]/8)*3) * 2;
+					if(dflag)
+						fprintf(stderr,"cpu%d: %d,",i,percent_cpu[i]);
+				}
 				if(dflag)
-					fprintf(stderr,"cpu%d: %d,",i,percent_cpu[i]);
+					fprintf(stderr,"\n");
 			}
-			if(dflag)
-				fprintf(stderr,"\n");
-			if(!qflag && (ttylog || regexec(&preg_proxy,buf,1,pmatch,0) == 0))
+
+			if(!qflag && (ttylog || q == 0))
 			{
 				printf("%s",buf); fflush(stdout);
 			}

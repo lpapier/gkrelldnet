@@ -42,12 +42,15 @@ static gint		style_id;
 /* config widgets */
 static GtkWidget *entry_mon_file,*button_enable;
 static GtkWidget *entry_format_str, *entry_start_cmd;
+static GtkWidget *entry_pck_done_cmd;
 static GtkWidget *check_timeout_spin_button;
 
 /* scroll vars */
 static gint gk_width, separator_len;
+/* buf. for CPU percentage */
+static gint *buf_cpu_percent;
 
-
+/* config. and monitored value */
 typedef struct
 {
 	gboolean enable;                     /* enable plugin */
@@ -58,10 +61,12 @@ typedef struct
 	gint wu_in, wu_out;                  /* i/O work units */
 	gint *cpu_percent;                   /* cruncher % done */
 	gchar contest[4];                    /* current contest */
-	gchar start_cmd[128];                /* start dnet client */
-	gchar stop_cmd[128];                 /* stop dnet client */
+	gchar start_cmd[128];                /* start dnet client cmd */
+	gchar stop_cmd[128];                 /* stop dnet client cmd */
+	gchar pck_done_cmd[128];             /* packet done cmd */
 } DnetMon;
 
+/* default plugin config. */
 static DnetMon dnetmon = {
 	TRUE, 2,
 	"/tmp/dnetw.mon", "$c:$i / $o",
@@ -69,7 +74,8 @@ static DnetMon dnetmon = {
 	0, 0,
 	NULL,
 	"???",
-	"dnetw -q", "dnetc -quiet -shutdown"
+	"dnetw -q", "dnetc -quiet -shutdown",
+	""
 };
 
 /*  update dnet values */
@@ -77,9 +83,15 @@ static void update_dnet(void)
 {
 	struct stat buf;
 	FILE *fd;
+	gint *ti;
 	gchar tmp[128], *t2;
 	gint pos,ncpu,i;
 
+	/* swap CPU value */
+	ti = buf_cpu_percent;
+	buf_cpu_percent = dnetmon.cpu_percent;
+	dnetmon.cpu_percent = ti;
+	
 	/* init. */
 	dnetmon.wu_in = dnetmon.wu_out = 0;
 	for(i=0;i<dnetmon.n_cpu;i++)
@@ -117,11 +129,20 @@ static void update_dnet(void)
 				/* free old RAM */
 				free(dnetmon.cpu_percent);
 				/* allocate RAM for cpu monitoring */
-				if((dnetmon.cpu_percent = calloc(ncpu,sizeof(gint))) == NULL)
+				if((dnetmon.cpu_percent = calloc(ncpu,sizeof(gint))) == NULL
+				   || (ti = calloc(ncpu,sizeof(gint))) == NULL)
 				{
 					fclose(fd);
 					return;
 				}
+				/* copy old CPU value */
+				for(i=0;i<dnetmon.n_cpu;i++)
+					ti[i] = buf_cpu_percent[i];
+				for(i=dnetmon.n_cpu;i<ncpu;i++)
+					ti[i] = 0;
+				/* free old mem */
+				free(buf_cpu_percent);
+				buf_cpu_percent = ti;
 			}
 			/* update number of crunchers */
 			dnetmon.n_cpu = ncpu;
@@ -134,6 +155,18 @@ static void update_dnet(void)
 					t2[0] = '\0';
 				}
 			}
+		}
+	}
+
+	for(i=0;i<dnetmon.n_cpu;i++)
+	{
+		/* packet done */
+		if(dnetmon.pck_done_cmd[0] != '\0'
+		   && dnetmon.cpu_percent[i] < buf_cpu_percent[i])
+		{
+			strcpy(tmp,dnetmon.pck_done_cmd);
+			strcat(tmp," &");
+			system(tmp);
 		}
 	}
 
@@ -344,6 +377,7 @@ static gchar *plugin_info_text[] = {
 	"\t- monitoring of percentage done in current block/stub.\n",
 	"\t- monitoring of current contest.\n",
 	"\t- configurable output format.\n",
+	"\t- execute a program after each packet is done.\n",
 	"\t- start/stop dnet client on mouse button click.\n\n",
 	"<b>Mouse Button Actions:\n\n",
 	"<b>\tLeft ",
@@ -372,7 +406,10 @@ static gchar *plugin_info_text[] = {
 	"The plugin will do it for you.\n\n",
 	"<b>\tMonitor File\n",
 	"\tSet the file used by the Distributed.net client wrapper 'dnetw' to communicate\n",
-	"\twith monitoring applications (default: /tmp/dnetw.log).\n"
+	"\twith monitoring applications (default: /tmp/dnetw.log).\n\n",
+	"<b>\tPacket Completion Command\n",
+	"\tCommand line executed each time a packet is done (default: none).\n"
+	"\texample: 'esdplay /usr/share/sounds/a_nice_sound_that_I_love.wav'\n"
 };
 
 /* configuration tab */
@@ -410,11 +447,19 @@ static void create_dnet_tab(GtkWidget *tab)
 	gtk_container_add(GTK_CONTAINER(vbox),hbox);
 
 	hbox = gtk_hbox_new(FALSE, 0);
+	label = gtk_label_new("Packet Completion Command");
+	gtk_box_pack_start(GTK_BOX(hbox), label, FALSE, FALSE, 4);
+	entry_pck_done_cmd = gtk_entry_new_with_max_length(127);
+	gtk_entry_set_text(GTK_ENTRY(entry_pck_done_cmd),dnetmon.pck_done_cmd);
+	gtk_box_pack_start(GTK_BOX(hbox), entry_pck_done_cmd, TRUE, TRUE, 4);
+	gtk_container_add(GTK_CONTAINER(vbox),hbox);
+
+	hbox = gtk_hbox_new(FALSE, 0);
 	label = gtk_label_new("Start Command");
 	gtk_box_pack_start(GTK_BOX(hbox), label, FALSE, FALSE, 4);
 	entry_start_cmd = gtk_entry_new_with_max_length(127);
 	gtk_entry_set_text(GTK_ENTRY(entry_start_cmd),dnetmon.start_cmd);
-	gtk_box_pack_start(GTK_BOX(hbox), entry_start_cmd, FALSE, FALSE, 4);
+	gtk_box_pack_start(GTK_BOX(hbox), entry_start_cmd, TRUE, TRUE, 4);
 	gtk_container_add(GTK_CONTAINER(vbox),hbox);
 
 	hbox = gtk_hbox_new(FALSE, 0);
@@ -471,6 +516,7 @@ static void save_config(FILE *f)
 	fprintf(f,"%s logfile %s\n",CONFIG_KEYWORD,dnetmon.file);
 	fprintf(f,"%s format_string %s\n",CONFIG_KEYWORD,dnetmon.format_string);
 	fprintf(f,"%s start_command %s\n",CONFIG_KEYWORD,dnetmon.start_cmd);
+	fprintf(f,"%s packet_completion_cmd %s\n",CONFIG_KEYWORD,dnetmon.pck_done_cmd);
 }
 
 static void load_config(gchar *arg)
@@ -489,6 +535,8 @@ static void load_config(gchar *arg)
 		strcpy(dnetmon.format_string,item);
 	else if(!strcmp("start_command",config))
 		strcpy(dnetmon.start_cmd,item);
+	else if(!strcmp("packet_completion_cmd",config))
+		strcpy(dnetmon.pck_done_cmd,item);
 }
 
 static void apply_config(void)
@@ -504,6 +552,8 @@ static void apply_config(void)
 	strcpy(dnetmon.format_string,s);
 	s = gtk_entry_get_text(GTK_ENTRY(entry_start_cmd));
 	strcpy(dnetmon.start_cmd,s);
+	s = gtk_entry_get_text(GTK_ENTRY(entry_pck_done_cmd));
+	strcpy(dnetmon.pck_done_cmd,s);
    
 	/* delete old panel */
 	if(panel != NULL)
@@ -551,9 +601,17 @@ static Monitor	plugin_mon	=
 Monitor *
 init_plugin()
 {
+	int i;
+
 	/* allocate RAM for cpu monitoring */
-	if((dnetmon.cpu_percent = calloc(dnetmon.n_cpu,sizeof(gint))) == NULL)
+	if((dnetmon.cpu_percent = calloc(dnetmon.n_cpu,sizeof(gint))) == NULL
+	   || (buf_cpu_percent = calloc(dnetmon.n_cpu,sizeof(gint))) == NULL)
 		return NULL;
+	for(i=0;i<dnetmon.n_cpu;i++)
+	{
+		dnetmon.cpu_percent[i] = 0;
+		buf_cpu_percent[i] = 0;
+	}
 
 	style_id = gkrellm_add_meter_style(&plugin_mon, STYLE_NAME);
 	return &plugin_mon;

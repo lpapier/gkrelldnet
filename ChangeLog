@@ -1,6 +1,9 @@
 GKrellM plugin ChangeLog
 ------------------------
 
+0.4 Mon Aug 07, 2000
+	* support up to 10 CPU.
+	
 0.3 Sun Jul 30, 2000
 	* left mouse button start the dnet client.
 	* right mouse button stop the dnet client.

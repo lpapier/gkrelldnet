@@ -9,17 +9,23 @@ gkrelldnet is a monitoring system for Distributed.net client.
 
 Requirements
 ============
-* a Linux system (the wrapper will only work on Linux system but can be ported
-  to other Unix system).
+* a Linux system with kernel support for Unix 98 (the wrapper will only work
+  on Linux system but can be ported to other Unix system).
 * a working Distributed.net client (see http://www.distributed.net/).
-* GKrellM multi-monitor app (0.10.1 or better) (see http://gkrellm.net/).
+* GKrellM multi-monitor app (0.10.0 or better) (see http://gkrellm.net/).
 
 
 GKrellDnet provides
 ===================
 * a distibuted.net client wrapper to make it possible to write monitoring
   applets.
-* a GKrellM plugin. This plugin features (see also 'Info' in plugin config.)
+  It's possible to monitor the client activity without the
+  wrapper but then it's not possible to have the % done in the current
+  stub/block. This is because the client doesn't print the crunch'o'meter if
+  the client output is not a tty. And this is why I have write this wrapper.
+
+* a GKrellM plugin.
+  This plugin features (see also 'Info' in plugin config.)
     - monitor input/output work units
     - monitor current contest
     - percentage done in current block/stub
@@ -28,8 +34,8 @@ GKrellDnet provides
 
 Limitation
 ==========
-* the plugin currently only support one cpu. If you have ideas about how to
-  setup the plugin layout for SMP/multi proc. system, send me an email now !
+* the plugin support up to 10 CPU but I have no idea for a nice layout. So
+  your ideas are welcome.
 * on multi-proc. system, you will get inaccurate contest report if not all
   crunchers work on the same contest.
 * see TODO file.
@@ -82,8 +88,8 @@ your shell man page for more info).
 
 IMPORTANT:
 ----------
-Be sure that the file used to monitor the client is the same as the one used
-in the monitoring app (GKrellDnet plugin).
+If you start the wrapper by hand: be sure that the file used to monitor the
+client is the same as the one used in the monitoring app (GKrellDnet plugin).
 
 
 How does the wrapper work ?

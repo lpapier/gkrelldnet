@@ -1,4 +1,5 @@
-/* $Id: shmem.h,v 1.3 2004-07-17 10:29:34 papier Exp $ */
+/* $Id: shmem.h,v 1.4 2004-11-27 16:25:37 papier Exp $ */
+
 
 #ifndef __SHMEM_H__
 #define __SHMEM_H__

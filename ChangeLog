@@ -1,8 +1,11 @@
 GKrellM plugin ChangeLog
 ------------------------
 
+0.14.1 Sat Nov 27, 2004
+	* chg: fix opteron compilation. Add '-fPIC' to CFLAGS.
+
 0.14.1 Sun Sep  5, 2004
-	* new: running dnetw and gkrellm as different user is now possible.
+	* new: dnetw and gkrellm can run as different user.
 	
 0.14 Sat Jul 17, 2004
 	* new: each cpu has is own krell (patch from Christoph Hohmann).
@@ -68,7 +71,7 @@ dnetw ChangeLog
 ---------------
 	
 0.14.1 Sun Sep  5, 2004
-	* new: running dnetw and gkrellm as different user is now possible.
+	* new: dnetw and gkrellm can run as different user.
 
 0.14 Sat Jul 17, 2004
 	* none.

@@ -34,8 +34,11 @@
 
 static int dflag = 0, qflag = 0;
 
+
 /* pid of the dnet client */
 static 	pid_t fils;
+static	char **nargv = NULL;
+static  int nargc;
 /* tty file descriptor */
 static int fd = -1, tty_fd = -1;
 /* cpu crunch-o-meter */
@@ -45,20 +48,30 @@ static char monfile[128] = "";
 static int mon_fd = -1;
 /* regex */
 static int regex_flag = 0;
-static regex_t preg_in, preg_out, preg_contest;
+static regex_t preg_in, preg_out, preg_contest, preg_cruncher;
+
 
 /* clean exit function */
 static void clean_and_exit(char *text,int r)
 {
+	int i;
+
 	if(text != NULL)
 		perror(text);
 	if(percent_cpu != NULL)
 		free(percent_cpu);
+	if(nargv != NULL)
+	{
+		for(i=0;i<nargc;i++)
+			free(nargv[i]);
+		free(nargv);
+	}
 	if(pos_cpu != NULL)
 		free(pos_cpu);
 	if(regex_flag)
 	{
-		regfree(&preg_in); regfree(&preg_out); regfree(&preg_contest);
+		regfree(&preg_in); regfree(&preg_out);
+		regfree(&preg_contest); regfree(&preg_cruncher);
 	}
 	if(mon_fd != -1)
 	{
@@ -127,13 +140,49 @@ static void change_dir(void)
 		}
 	}
 }
-	
+
+int get_arg(char ***args, char *str)
+{
+	char *tmp;
+	int i,n = 0;
+
+	/* allocate some pointers */
+	for(i=0;i<strlen(str);i++)
+	{
+		if(str[i] == ' ')
+			n++;
+	}
+	if((*args = (char **) calloc(n+2,sizeof(char *))) == NULL)
+		clean_and_exit("calloc",1);
+
+	/* first token */
+	i = 0;
+	tmp = strtok(str," ");
+	while(tmp != NULL)
+	{
+		/* allocate some RAM */
+		if(((*args)[i] = (char *) calloc(strlen(tmp),sizeof(char))) == NULL)
+			clean_and_exit("calloc",1);
+
+		strcpy((*args)[i],tmp);
+
+		/* next token */
+		tmp = strtok(NULL," ");
+		i++;
+	}
+
+	/* last pointer should be NULL */
+	(*args)[i] = NULL;
+	return i;
+}
+
 static void usage(char *pname)
 {
-	fprintf(stderr,"Distributed.net client wrapper 0.2\n");
-	fprintf(stderr,"usage: %s [-q] [-l<log_file>] <monitor_file>\n",pname);
-	fprintf(stderr," -q: disable terminal output\n");
-	fprintf(stderr," -l<log_file>: redirect client output in <log_file>\n");
+	fprintf(stderr,"Distributed.net client wrapper 0.4\n");
+	fprintf(stderr,"usage: %s [-q] [-l<file>] [-c<cmd>] <monitor_file>\n",pname);
+	fprintf(stderr," -q: disable all terminal output\n");
+	fprintf(stderr," -l<log_file>: redirect the client output in <file>\n");
+	fprintf(stderr," -c<cmd>: use <cmd> to start the dnetc client (default: 'dnetc')\n");
 	clean_and_exit(NULL,0);
 }
 
@@ -149,13 +198,13 @@ int main(int argc,char *argv[])
 
 	regmatch_t pmatch[2];
 
-	char logfile[128] = "stdout";
-	char contest[3] = "???";
+	char defcmd[] = "dnetc", logfile[128] = "stdout", contest[4] = "???";
+	char p[] = "a";
 	int log_fd,n_cpu = 1;
 	int wu_in = 0,wu_out = 0;
 
 	/* check arguments */
-	while ((ch = getopt(argc, argv, "hdql:n:")) != -1)
+	while ((ch = getopt(argc, argv, "hdql:c:")) != -1)
 	{
 		switch(ch)
 		{
@@ -165,8 +214,8 @@ int main(int argc,char *argv[])
 			case 'q':
 				qflag = 1;
 				break;
-			case 'n':
-				n_cpu = atoi(optarg);
+			case 'c':
+				nargc = get_arg(&nargv,optarg);
 				break;
 			case 'l':
 				strcpy(logfile,optarg);
@@ -180,6 +229,10 @@ int main(int argc,char *argv[])
 	/* get monitor filename */
 	strcpy(monfile,argv[argc-1]);
 
+	/* default command line */
+	if(nargv == NULL)
+		nargc = get_arg(&nargv,defcmd);
+
 	/* change output to logfile */
 	if(strcmp(logfile,"stdout") != 0)
 	{
@@ -189,14 +242,6 @@ int main(int argc,char *argv[])
 			clean_and_exit("dup2",1);
 	}
 	ttylog = isatty(1);
-	if(dflag)
-		fprintf(stderr,"ttylog = %d\n",ttylog);
-
-	/* allocate some RAM ;-) */
-	if((percent_cpu = (int *) calloc(n_cpu,sizeof(int))) == NULL)
-		clean_and_exit("calloc",1);
-	if((pos_cpu = (int *) calloc(n_cpu,sizeof(int))) == NULL)
-		clean_and_exit("calloc",1);
 
 	/* precompile regex */
 	if(regcomp(&preg_in,"[0-9]+.work.unit.*buff-in",REG_EXTENDED) != 0)
@@ -204,6 +249,8 @@ int main(int argc,char *argv[])
 	if(regcomp(&preg_out,"[0-9]+.work.unit.*buff-out",REG_EXTENDED) != 0)
 		clean_and_exit(NULL,1);
 	if(regcomp(&preg_contest,"Loaded.[A-Z0-9]{3}.",REG_EXTENDED) != 0)
+		clean_and_exit(NULL,1);
+	if(regcomp(&preg_cruncher,"[0-9]+.cruncher.*started",REG_EXTENDED) != 0)
 		clean_and_exit(NULL,1);
 	regex_flag = 1;
 
@@ -238,8 +285,8 @@ int main(int argc,char *argv[])
 		/* start dnet client */
 		if(dup2(tty_fd,1) == -1)
 			clean_and_exit("dup2",1);
-		if(execlp("dnetc","dnetc",NULL) == -1)
-			clean_and_exit("execlp",1);
+		if(execvp(nargv[0],nargv) == -1)
+			clean_and_exit("execvp",1);
 	}
 
 	/* set signal handler */
@@ -253,20 +300,21 @@ int main(int argc,char *argv[])
 	while((lu = read(fd,buf,128)) > 0)
 	{
 		buf[lu] = '\0';
-		if(buf[1] == '.')
+		if(buf[1] == '.' || buf[lu-1] != '\n')
 		{
-			/*
-			if((tmp = strstr(buf,"a")) != NULL)
-				pos_a = tmp - buf - 1;
- 			if((tmp = strstr(buf,"b")) != NULL)
-				pos_b = tmp - buf - 1;
-			*/
-
 			if(dflag)
 				fprintf(stderr,"lu: %02d, ",lu);
 			for(i=0;i<n_cpu;i++)
 			{
-				pos_cpu[i] = lu - 1;
+				if(n_cpu != 1)
+				{
+					p[0] = 'a' + i;
+					if((tmp = strstr(buf,p)) != NULL)
+						pos_cpu[i] = tmp - buf;
+				}
+				else
+					pos_cpu[i] = lu - 1;
+
 				percent_cpu[i] = (pos_cpu[i] - (pos_cpu[i]/8)*3) * 2;
 				if(dflag)
 					fprintf(stderr,"cpu%d: %d,",i,percent_cpu[i]);
@@ -282,10 +330,22 @@ int main(int argc,char *argv[])
 		{
 			if(regexec(&preg_in,buf,1,pmatch,0) == 0)
 				wu_in = strtol(&buf[pmatch[0].rm_so],NULL,10);
-			else if(regexec(&preg_out,buf,1,pmatch,0) == 0)
+			if(regexec(&preg_out,buf,1,pmatch,0) == 0)
 				wu_out = strtol(&buf[pmatch[0].rm_so],NULL,10);
-			else if(regexec(&preg_contest,buf,1,pmatch,0) == 0)
+			if(regexec(&preg_contest,buf,1,pmatch,0) == 0)
 				strncpy(contest,&buf[pmatch[0].rm_so+7],3);
+			if(percent_cpu == NULL
+			   && regexec(&preg_cruncher,buf,1,pmatch,0) == 0)
+			{
+				n_cpu = strtol(&buf[pmatch[0].rm_so],NULL,10);
+
+				/* allocate some RAM ;-) */
+				if((percent_cpu = (int *) calloc(n_cpu,sizeof(int))) == NULL)
+					clean_and_exit("calloc",1);
+				if((pos_cpu = (int *) calloc(n_cpu,sizeof(int))) == NULL)
+					clean_and_exit("calloc",1);
+			}
+
 
 			if(!qflag)
 				printf("%s",buf);
@@ -293,11 +353,16 @@ int main(int argc,char *argv[])
 
 		/* monitor output */
 		sprintf(buf1,"%s %d %d %d",contest,wu_in,wu_out,n_cpu);
-		for(i=0;i<n_cpu;i++)
+		if(percent_cpu != NULL)
 		{
-			sprintf(buf2," %d",percent_cpu[i]);
-			strcat(buf1,buf2);
+			for(i=0;i<n_cpu;i++)
+			{
+				sprintf(buf2," %d",percent_cpu[i]);
+				strcat(buf1,buf2);
+			}
 		}
+		else
+			strcat(buf1," 0");
 		strcat(buf1,"\n");
 		write(mon_fd,buf1,strlen(buf1));
 	}

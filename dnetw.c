@@ -300,7 +300,7 @@ int main(int argc,char *argv[])
 	while((lu = read(fd,buf,128)) > 0)
 	{
 		buf[lu] = '\0';
-		if(buf[1] == '.' || buf[lu-1] != '\n')
+		if(percent_cpu != NULL && (buf[1] == '.' || buf[lu-1] != '\n'))
 		{
 			if(dflag)
 				fprintf(stderr,"lu: %02d, ",lu);

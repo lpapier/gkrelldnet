@@ -23,6 +23,8 @@
 #include <fcntl.h>
 #include <signal.h>
 #include <regex.h>
+#include <sys/ipc.h>
+#include <sys/shm.h>
 
 #include <stdio.h>
 #include <stdlib.h>
@@ -48,7 +50,8 @@ static  int nargc;
 static int fd = -1, tty_fd = -1;
 /* monitor file fd */
 static char monfile[128] = "";
-static int mon_fd = -1;
+static int shmid;
+static struct dnetc_values *shmem = NULL;
 /* regex */
 static int regex_flag = 0;
 static regex_t preg_in, preg_out, preg_contest, preg_cruncher;
@@ -74,11 +77,11 @@ static void clean_and_exit(char *text,int r)
 		regfree(&preg_contest); regfree(&preg_cruncher);
 		regfree(&preg_proxy); regfree(&preg_absolute);
 	}
-	if(mon_fd != -1)
+	if((int) shmem != -1 && shmem != NULL)
 	{
-		close(mon_fd);
-		if(unlink(monfile) == -1)
-			perror("unlink");
+		shmem->running = FALSE;
+		shmctl(shmid, IPC_RMID, 0);
+		shmdt(shmem);
 	}
 	if(tty_fd != -1)
 		close(tty_fd);
@@ -268,7 +271,7 @@ int main(int argc,char *argv[])
 	int contest_offset;
 
 	char *ttydev,*tmp;
-	char buf[BUF_SIZE],buf1[128],buf2[32];
+	char buf[BUF_SIZE];
 	int ttylog,lu,i,q;
 
 	regmatch_t pmatch[2];
@@ -277,12 +280,6 @@ int main(int argc,char *argv[])
 	int pos_cpu[MAX_CPU];
 	char p[] = "a";
 	int log_fd;
-
-	struct dnetc_values dnv = {
-		"???", CRUNCH_RELATIVE,
-		0, 0, 1,
-		{ 0 }
-		};
 
 	/* check arguments */
 	while ((ch = getopt(argc, argv, "hdoql:c:")) != -1)
@@ -336,6 +333,21 @@ int main(int argc,char *argv[])
 	}
 	ttylog = isatty(1);
 
+	/* creat shared memory segment */
+	if((shmid = my_shmget(monfile,sizeof(struct dnetc_values),IPC_CREAT|IPC_EXCL|0660)) == -1)
+		clean_and_exit("shmget",1);
+	if((int) (shmem = shmat(shmid,0,0)) == -1)
+		clean_and_exit("shmat",1);
+
+	/* init shared memory content */
+	shmem->running = TRUE;
+	strcpy(shmem->contest,"???");
+	shmem->cmode = CRUNCH_RELATIVE;
+	shmem->wu_in = shmem->wu_out = 0;
+	shmem->n_cpu = 1;
+	for(i=0;i<MAX_CPU;i++)
+		shmem->val_cpu[i] = 0;
+	
 	/* precompile regex */
 	if(oflag)
 	{
@@ -345,13 +357,13 @@ int main(int argc,char *argv[])
 			clean_and_exit(NULL,1);
 		if(regcomp(&preg_contest,"Loaded.[A-Z0-9]{3}.",REG_EXTENDED) != 0)
 			clean_and_exit(NULL,1);
-		if(regcomp(&preg_proxy,"(Retrieved|Sent).+work.unit",REG_EXTENDED) !=0)
+		if(regcomp(&preg_proxy,"(Retrieved|Sent).+(work.unit|packet)",REG_EXTENDED) !=0)
 			clean_and_exit(NULL,1);
 
 		contest_offset = 7;
 
 		/* force relative crunch-o-meter style */
-		dnv.cmode = CRUNCH_RELATIVE;
+		shmem->cmode = CRUNCH_RELATIVE;
 	}
 	else
 	{
@@ -386,13 +398,6 @@ int main(int argc,char *argv[])
 	if((tty_fd = open(ttydev, O_RDWR)) == -1)
 		clean_and_exit("open tty",1);
 
-	/* open monitor file */
-	if(strcmp(monfile,"") != 0)
-	{
-		if((mon_fd = creat(monfile, S_IRUSR|S_IWUSR|S_IRGRP|S_IROTH)) == -1)
-		clean_and_exit("creat monitor file",1);
-	}
-	
 	/* start dnet client and start reading tty */
 	if((fils = fork()) == -1)
 		clean_and_exit("fork",1);
@@ -418,7 +423,7 @@ int main(int argc,char *argv[])
 
 	/* some more init */
 	for(i=0;i<MAX_CPU;i++)
-		dnv.val_cpu[i] = 0;
+		shmem->val_cpu[i] = 0;
 
 	/* main loop */
 	while((lu = mygets(fd,buf,BUF_SIZE)) > 0)
@@ -431,6 +436,10 @@ int main(int argc,char *argv[])
 			if(dflag)
 				fprintf(stderr,"lu: %02d, ",lu);
 
+			/* fix line with two 0x0d char */
+			if((tmp = strchr(&buf[1],0x0d)) != NULL)
+				lu = tmp-buf;
+
 			/* skip line with proxy comm. */
 			q = regexec(&preg_proxy,buf,1,pmatch,0);
 			if(q != 0)
@@ -439,28 +448,28 @@ int main(int argc,char *argv[])
 				if(regexec(&preg_absolute,buf,1,pmatch,0) == 0)
 				{
 					/* set crunch-o-meter mode */
-					dnv.cmode = CRUNCH_ABSOLUTE;
+					shmem->cmode = CRUNCH_ABSOLUTE;
 					/* read CPU num */
 					i = strtol(&buf[pmatch[0].rm_so+1],(char **) NULL,10) - 1;
 					/* avoid core dump */
 					i %= MAX_CPU;
 					/* read k(keys|nodes) */
-					dnv.val_cpu[i] = extract_val(&buf[pmatch[0].rm_so]);
+					shmem->val_cpu[i] = extract_val(&buf[pmatch[0].rm_so]);
 					
 					if(dflag)
 					{
-						fprintf(stderr,"\ncpu = %d, %llu nodes|keys\n",i,dnv.val_cpu[i]);
+						fprintf(stderr,"\ncpu = %d, %llu nodes|keys\n",i,shmem->val_cpu[i]);
 						fprintf(stderr,"found: %s\n",&buf[pmatch[0].rm_so]);
 					}
 				}
 				else
 				{
 					/* set crunch-o-meter mode */
-					dnv.cmode = CRUNCH_RELATIVE;
+					shmem->cmode = CRUNCH_RELATIVE;
 
-					for(i=0;i<dnv.n_cpu;i++)
+					for(i=0;i<shmem->n_cpu;i++)
 					{
-						if(dnv.n_cpu != 1)
+						if(shmem->n_cpu != 1)
 						{
 							p[0] = 'a' + i;
 							if((tmp = strstr(buf,p)) != NULL)
@@ -469,12 +478,12 @@ int main(int argc,char *argv[])
 						else
 							pos_cpu[i] = lu - 1;
 						
-						dnv.val_cpu[i] = (pos_cpu[i] - (pos_cpu[i]/8)*3) * 2;
-						if(dnv.val_cpu[i] > 100)
-							dnv.val_cpu[i] = 100;
+						shmem->val_cpu[i] = (pos_cpu[i] - (pos_cpu[i]/8)*3) * 2;
+						if(shmem->val_cpu[i] > 100)
+							shmem->val_cpu[i] = 100;
 						
 						if(dflag)
-							fprintf(stderr,"cpu%d: %llu,",i,dnv.val_cpu[i]);
+							fprintf(stderr,"cpu%d: %llu,",i,shmem->val_cpu[i]);
 					}
 					if(dflag)
 						fprintf(stderr,"\n");
@@ -489,28 +498,20 @@ int main(int argc,char *argv[])
 		else
 		{
 			if(regexec(&preg_in,buf,1,pmatch,0) == 0)
-				dnv.wu_in = strtol(&buf[pmatch[0].rm_so],NULL,10);
+				shmem->wu_in = strtol(&buf[pmatch[0].rm_so],NULL,10);
 			if(regexec(&preg_out,buf,1,pmatch,0) == 0)
-				dnv.wu_out = strtol(&buf[pmatch[0].rm_so],NULL,10);
+				shmem->wu_out = strtol(&buf[pmatch[0].rm_so],NULL,10);
 			if(regexec(&preg_contest,buf,1,pmatch,0) == 0)
-				strncpy(dnv.contest,&buf[pmatch[0].rm_so+contest_offset],3);
+				strncpy(shmem->contest,&buf[pmatch[0].rm_so+contest_offset],3);
 			if(regexec(&preg_cruncher,buf,1,pmatch,0) == 0)
 			{
-				dnv.n_cpu = strtol(&buf[pmatch[0].rm_so],NULL,10);
+				shmem->n_cpu = strtol(&buf[pmatch[0].rm_so],NULL,10);
 				/* too many crunchers */
-				if(dnv.n_cpu > MAX_CPU)
+				if(shmem->n_cpu > MAX_CPU)
 				{
 					fprintf(stderr,"dnetw: too many crunchers\n");
 					clean_and_exit(NULL,1);
 				}
-
-				/* allocate some RAM ;-) */
-/*
-  if((dnv.val_cpu = (ulonglong *) calloc(dnv.n_cpu,sizeof(ulonglong))) == NULL)
-  clean_and_exit("calloc",1);
-  if((pos_cpu = (int *) calloc(dnv.n_cpu,sizeof(int))) == NULL)
-  clean_and_exit("calloc",1);
-*/
 			}
 
 			if(!qflag)
@@ -519,16 +520,6 @@ int main(int argc,char *argv[])
 			}
 		}
 
-		/* monitor output */
-		sprintf(buf1,"%s %d %d %d %d",dnv.contest,dnv.cmode,dnv.wu_in,dnv.wu_out,dnv.n_cpu);
-		for(i=0;i<dnv.n_cpu;i++)
-		{
-			sprintf(buf2," %llu",dnv.val_cpu[i]);
-			strcat(buf1,buf2);
-		}
-		
-		strcat(buf1,"\n");
-		write(mon_fd,buf1,strlen(buf1));
 	}
 
 	clean_and_exit(NULL,0);

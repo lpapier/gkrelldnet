@@ -1,6 +1,11 @@
 GKrellM plugin ChangeLog
 ------------------------
 
+0.8 Sun Mar 11, 2001
+	* fix: '%' suffix was not added in relative mode.
+	* chg: complete rewrite of the wrapper-plugin communication. It's now
+	based on shared memory segment (a smarter solution than regular file). 
+	
 0.7 Mon Feb 05, 2001
 	* new: add support for the new absolute crunch-o-meter style.
 	* chg: now the plugin automaticaly add a suffix to the crunch-o-meter
@@ -31,6 +36,11 @@ GKrellM plugin ChangeLog
 dnetw ChangeLog
 ---------------
 
+0.8 Sun Mar 11, 2001
+	* fix: old mode was broken since version 0.7.
+	* chg: complete rewrite of the wrapper-plugin communication. It's now
+	based on shared memory segment (a smarter solution than regular file). 
+	
 0.7 Mon Feb 05, 2001
 	* fix: small bug in dnetc output parsing if there are more than 9
 	packets in the output buffer.

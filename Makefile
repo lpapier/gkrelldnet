@@ -8,13 +8,13 @@ all: dnetw gkrelldnet.so
 
 gkrelldnet.so: gkrelldnet.c
 	$(CC) $(CFLAGS) `imlib-config --cflags-gdk` -c gkrelldnet.c
-	$(CC) $(LDFLAGS) -shared -Wl -o gkrelldnet.so gkrelldnet.o
+	$(CC) $(LDFLAGS) -shared -Wl -o gkrelldnet.so gkrelldnet.o shmem.o
 
-dnetw: dnetw.o
-	$(CC) $(LDFLAGS) -o dnetw dnetw.o
+dnetw: dnetw.o shmem.o
+	$(CC) $(LDFLAGS) -o dnetw dnetw.o shmem.o
 
 install:
 	cp gkrelldnet.so $(HOME)/.gkrellm/plugins
 
 clean:
-	rm -f gkrelldnet.so gkrelldnet.o dnetw dnetw.o
+	rm -f gkrelldnet.so dnetw *.o

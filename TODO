@@ -1,0 +1,11 @@
+dnetw:
+- use a shm to communicate to monitoring apps.
+- improve % reading accuracy.
+- support SMP.
+- support for dnetc options.
+
+gtkrellm plugin:
+- configurable output text (%i, %o, %p).
+- support SMP.
+- left click -> print current contest.
+- add a led for active/inactive state (as in gtkrelmms).

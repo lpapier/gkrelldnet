@@ -141,6 +141,7 @@ static void change_dir(void)
 	}
 }
 
+/* read arg for '-c' option */
 int get_arg(char ***args, char *str)
 {
 	char *tmp;
@@ -174,6 +175,37 @@ int get_arg(char ***args, char *str)
 	/* last pointer should be NULL */
 	(*args)[i] = NULL;
 	return i;
+}
+
+/* a fgets for int fd */
+int mygets(int fd,char *buf,int count)
+{
+	static char tmp[256] = "";
+	char *t = NULL;
+	int s,p;
+	int i = 0;
+
+	strcpy(buf,tmp);
+	p = strlen(tmp);
+	do
+	{
+		s = read(fd,&buf[p],count-p);
+		p += s;
+		buf[p] = '\0';
+		t = strchr(buf,'\n');
+	}
+	while(s > 0 && t == NULL && buf[0] != 0x0d);
+
+	if(t != NULL)
+	{
+		strcpy(tmp,t+1);
+		p = (t-buf+1);
+		buf[p] = '\0';
+	}
+	else
+		tmp[0] = '\0';
+
+	return p;
 }
 
 static void usage(char *pname)
@@ -236,7 +268,7 @@ int main(int argc,char *argv[])
 	/* change output to logfile */
 	if(strcmp(logfile,"stdout") != 0)
 	{
-		if((log_fd = open(logfile, O_CREAT|O_WRONLY|O_TRUNC, S_IRUSR|S_IWUSR|S_IRGRP|S_IROTH)) == -1)
+		if((log_fd = open(logfile, O_CREAT|O_WRONLY|O_APPEND, S_IRUSR|S_IWUSR|S_IRGRP|S_IROTH)) == -1)
 		clean_and_exit("open logfile",1);
 		if(dup2(log_fd,1) == -1)
 			clean_and_exit("dup2",1);
@@ -296,14 +328,14 @@ int main(int argc,char *argv[])
 	   || signal(SIGCHLD,got_signal) == SIG_ERR
 	   || signal(SIGTERM,got_signal) == SIG_ERR)
 		clean_and_exit("signal",1);
-	   
-	while((lu = read(fd,buf,128)) > 0)
+
+	while((lu = mygets(fd,buf,128)) > 0)
 	{
-		buf[lu] = '\0';
 		if(percent_cpu != NULL && (buf[1] == '.' || buf[lu-1] != '\n'))
 		{
 			if(dflag)
 				fprintf(stderr,"lu: %02d, ",lu);
+
 			for(i=0;i<n_cpu;i++)
 			{
 				if(n_cpu != 1)
@@ -348,7 +380,9 @@ int main(int argc,char *argv[])
 
 
 			if(!qflag)
-				printf("%s",buf);
+			{
+				printf("%s",buf); fflush(stdout);
+			}
 		}
 
 		/* monitor output */

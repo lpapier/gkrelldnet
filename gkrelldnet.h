@@ -1,6 +1,6 @@
 
-#ifndef __SENSORS_H__
-#define __SENSORS_H__
+#ifndef __GKRELLDNET_H__
+#define __GKRELLDNET_H__
 
 #include <gkrellm/gkrellm.h>
 
@@ -14,6 +14,6 @@
 #define MY_PLACEMENT (MON_CPU)
 #endif
 
-#define DNET_VERSION "0.6.1"
+#include "dnetw.h"
 
 #endif

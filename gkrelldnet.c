@@ -40,6 +40,7 @@ static GkrellmDecal    *decal_wu;
 static GkrellmKrell    *krell_percent;
 static gint		style_id;
 static gboolean mouse_in;
+static GtkTooltips *tooltip = NULL;
 
 /* config widgets */
 static GtkWidget *entry_format_str;
@@ -202,7 +203,7 @@ static void update_decals_text(gchar *text)
 		}
 	}
 	else
-		strcpy(text,"dnet");
+		snprintf(text,127,"dnet %s",GKRELLDNET_VERSION);
 }
 
 static void update_krells(void)
@@ -227,6 +228,9 @@ static void update_plugin(void)
 		update_decals_text(text);
 		sprintf(full_text,"%s   ***   %s",text,text);
 		len = gdk_string_width(panel->textstyle->font,text);
+
+		gtk_tooltips_set_tip(tooltip,panel->drawing_area,text,NULL);
+		gtk_tooltips_set_delay(tooltip, 1000);
 
 		update_krells();
 	}
@@ -304,7 +308,7 @@ static void create_plugin(GtkWidget *vbox, gint first_create)
 	GkrellmTextstyle  *ts;
 	GkrellmPiximage   *krell_image;
 	gint y;
-	gchar text[96] = "dnet";
+	gchar text[96];
 
 	gkrellm_vbox = vbox;
 
@@ -330,6 +334,13 @@ static void create_plugin(GtkWidget *vbox, gint first_create)
 	update_decals_text(text);
 	gkrellm_draw_decal_text(panel,decal_wu,text,-1);
 	update_krells();
+
+	/* create Tooltip if necessary */
+	if(tooltip == NULL) {
+		tooltip = gtk_tooltips_new();
+		gtk_tooltips_set_tip(tooltip,panel->drawing_area,text,NULL);
+		gtk_tooltips_set_delay(tooltip, 1000);
+	}
 
 	if (first_create)
 	{

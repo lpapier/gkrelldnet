@@ -123,7 +123,7 @@ static void update_dnet(void)
 					return;
 				}
 			}
-			/* update numbr of crunchers */
+			/* update number of crunchers */
 			dnetmon.n_cpu = ncpu;
 			/* read CPU % */
 			for(i=dnetmon.n_cpu-1;i>=0;i--)
@@ -234,6 +234,7 @@ static void update_plugin(void)
 			gkrellm_draw_decal_text(panel,decal_wu,text,-1);
 		}
 
+		update_krells();
 		gkrellm_draw_layers(panel);
 	}
 }
@@ -244,7 +245,9 @@ static gint panel_expose_event(GtkWidget *widget, GdkEventExpose *ev)
 	{
 		gdk_draw_pixmap(widget->window,
 						widget->style->fg_gc[GTK_WIDGET_STATE (widget)],
-						panel->pixmap, ev->area.x, ev->area.y, ev->area.x, ev->area.y,
+						panel->pixmap,
+						ev->area.x, ev->area.y,
+						ev->area.x, ev->area.y,
 						ev->area.width, ev->area.height);
 	}
 	
@@ -297,8 +300,8 @@ create_plugin(GtkWidget *vbox, gint first_create)
 		gkrellm_destroy_krell_list(panel);
 	}
 
-	style = gkrellm_panel_style(style_id);
-	krell_image = gkrellm_krell_panel_image(style_id);
+	style = gkrellm_meter_style(style_id);
+	krell_image = gkrellm_krell_meter_image(style_id);
 	ts = gkrellm_panel_textstyle(style_id);
 	panel->textstyle = ts;
 
@@ -346,7 +349,7 @@ static gchar *plugin_info_text[] = {
 	"<b>\tLeft ",
 	"click start a new dnet client (default: dnetw -q <monitor file>).\n",
 	"<b>\tRight ",
-	"click stop all dnet client (dnetc -quiet -shutdown).\n\n",
+	"click stop all dnet client (default: dnetc -quiet -shutdown).\n\n",
 	"<b>Configuration:\n\n",
 	"<b>\tEnable Distributed.net monitor\n",
 	"\tIf you want to disable this plugin (default: enable).\n\n",

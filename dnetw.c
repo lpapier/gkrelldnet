@@ -1,5 +1,5 @@
 /* dnetw: a distributed.net client wrapper
-|  Copyright (C) 2000-2002 Laurent Papier
+|  Copyright (C) 2000-2003 Laurent Papier
 |
 |  Author:  Laurent Papier    papier@tuxfan.net
 |

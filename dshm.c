@@ -1,5 +1,5 @@
-/* a simple tool to dump the shared memory segment values
-|  Copyright (C) 2000-2002 Laurent Papier
+/* a simple tool to dump the dnetw shared memory segment values
+|  Copyright (C) 2000-2003 Laurent Papier
 |
 |  Author:  Laurent Papier <papier@tuxfan.net>
 |
@@ -83,4 +83,3 @@ int main(int argc,char *argv[])
 	shmdt(shmem);
 	exit(0);
 }
-

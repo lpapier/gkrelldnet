@@ -1,4 +1,4 @@
-/* $Id: gkrelldnet.c,v 1.28 2004-09-05 20:43:22 papier Exp $ */
+/* $Id: gkrelldnet.c,v 1.29 2004-11-27 16:25:37 papier Exp $ */
 
 /* GKrelldnet: a GKrellM plugin to monitor Distributed.net client
 |  Copyright (C) 2000-2003 Laurent Papier
@@ -275,7 +275,7 @@ static void update_plugin(void)
 		
 		update_decals_text(text);
 		sprintf(full_text,"%s   ***   %s",text,text);
-		len = gdk_string_width(panel->textstyle->font,text);
+		len = gkrellm_gdk_string_width(panel->textstyle->font,text);
 
 		gtk_tooltips_set_tip(tooltip,panel->drawing_area,text,NULL);
 		gtk_tooltips_set_delay(tooltip, 1000);
@@ -404,7 +404,7 @@ static void create_plugin(GtkWidget *vbox, gint first_create)
 	gkrellm_draw_panel_layers(panel);
 
 	/* some scroll init. */
-	separator_len = gdk_string_width(panel->textstyle->font,"   ***   ");
+	separator_len = gkrellm_gdk_string_width(panel->textstyle->font,"   ***   ");
 	m = gkrellm_get_style_margins(style);
 	gk_width = gkrellm_chart_width() - (m->left + m->right) - 2;
 }

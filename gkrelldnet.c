@@ -40,7 +40,8 @@ static Krell    *krell_percent;
 static gint		style_id;
 
 /* config widgets */
-static GtkWidget *entry_mon_file,*button_enable,*entry_format_str;
+static GtkWidget *entry_mon_file,*button_enable;
+static GtkWidget *entry_format_str;
 static GtkWidget *check_timeout_spin_button;
 
 typedef struct
@@ -60,7 +61,7 @@ static DnetMon dnetmon = {
 	"/tmp/dnetw.mon", "$c:$i / $o",
 	0, 0, 0,
 	"???",
-	"dnetw -l /dev/null", "dnetc -quiet -shutdown"
+	"dnetw -q ", "dnetc -quiet -shutdown"
 };
 
 /*  update dnet values */
@@ -192,21 +193,18 @@ static gint cb_button_press(GtkWidget *widget, GdkEventButton *ev)
 	gchar command[128];
 
 	/* button 1 used (left button) */
-	/* pb with dnetc path -> change in dnetw to chdir in dnetc dir
 	if(ev->button == 1)
 	{
 		strcpy(command,dnetmon.start_cmd);
-		strcat(command," ");
 		strcat(command,dnetmon.file);
 	}
-		*/
 		
 	/* button 3 used (right button) */
 	if(ev->button == 3)
 		strcpy(command,dnetmon.stop_cmd);
 
 	/* launch the command */
-	if(ev->button == 3)
+	if(ev->button == 1 || ev->button == 3)
 	{
 		strcat(command," &");
 		system(command);
@@ -272,7 +270,13 @@ static gchar *plugin_info_text[] = {
 	"\t- monitoring of work units present in both input and output buffers.\n",
 	"\t- monitoring of percentage done in current block/stub.\n",
 	"\t- monitoring of current contest.\n",
-	"\t- configurable output format.\n\n",
+	"\t- configurable output format.\n",
+	"\t- start/stop dnet client on mouse button click.\n\n",
+	"<b>Mouse Button Actions:\n\n",
+	"<b>\tLeft ",
+	"click start a new dnet client (dnetw -q -l <monitor file>).\n",
+	"<b>\tRight ",
+	"click stop all dnet client (dnetc -quiet -shutdown).\n\n",
 	"<b>Configuration:\n\n",
 	"<b>\tEnable Distributed.net monitor\n",
 	"\tIf you want to disable this plugin (default: enable).\n\n",

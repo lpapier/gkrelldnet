@@ -1,11 +1,14 @@
 GKrellM plugin ChangeLog
 ------------------------
 
-0.11 Sun Apr 28, 2002
+0.12 Sun Jan 05, 2003
+	* new: add a tooltip with the current text.
+	
+0.11pre1 Sun Apr 28, 2002
 	* chg: ported to GkrellM 2.0.
 
 0.10 Sat Apr 27, 2002
-	* chg: the shared memory segment key is no longer fixed.
+	* chg: the shared memory segment key is dynamic.
 	That should prevent problems encountered by some users.
 	
 0.9 Sun Sep 02, 2001
@@ -52,7 +55,10 @@ GKrellM plugin ChangeLog
 dnetw ChangeLog
 ---------------
 
-0.11 Sun Apr 28, 2002
+0.12 Sun Jan 05, 2003
+	* new: add support for RC5-75 contest.
+
+0.11pre1 Sun Apr 28, 2002
 	* no change.
 
 0.10 Sat Apr 27, 2002

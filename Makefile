@@ -17,7 +17,6 @@ gkrelldnet.o: gkrelldnet.c
 
 install:
 	cp gkrelldnet.so $(HOME)/.gkrellm/plugins
-	cp dnetw /usr/local/bin
 
 clean:
 	rm -f gkrelldnet.so dnetw *.o

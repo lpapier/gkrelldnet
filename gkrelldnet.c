@@ -1,7 +1,7 @@
 /* GKrelldnet
 |  Copyright (C) 2000 Laurent Papier
 |
-|  Author:  Laurent Papier    papier@linuxfan.com
+|  Author:  Laurent Papier <papier@linuxfan.com>
 |
 |  This program is free software which I release under the GNU General Public
 |  License. You may redistribute and/or modify this program under the terms
@@ -43,6 +43,10 @@ static gint		style_id;
 static GtkWidget *entry_mon_file,*button_enable;
 static GtkWidget *entry_format_str, *entry_start_cmd;
 static GtkWidget *check_timeout_spin_button;
+
+/* scroll vars */
+static gint gk_width, separator_len;
+
 
 typedef struct
 {
@@ -137,9 +141,9 @@ static void update_dnet(void)
 }
 
 /* update text in gkrellm decals */
-static void update_decals_text(void)
+static void update_decals_text(gchar *text)
 {
-	gchar *s,text[64],buf[12];
+	gchar *s,buf[12];
 	gint t;
 
 	if(dnetmon.contest[0] != '?')
@@ -191,8 +195,6 @@ static void update_decals_text(void)
 	}
 	else
 		strcpy(text,"dnet");
-
-	gkrellm_draw_decal_text(panel,decal_wu,text,-1);
 }
 
 static void update_krells(void)
@@ -203,14 +205,35 @@ static void update_krells(void)
 
 static void update_plugin(void)
 {
-	static gint second_count = 0;
+	static gint second_count = 0, x_scroll = 0, len = 0;
+	static gchar text[96] = "dnet";
+	static gchar full_text[256];
 
-	if(dnetmon.enable && GK.second_tick
-	   && (second_count++ % dnetmon.check_timeout) == 0)
+	if(dnetmon.enable)
 	{
-		update_dnet();
-		update_decals_text();
-		update_krells();
+		if(GK.second_tick && (second_count++ % dnetmon.check_timeout) == 0)
+		{
+			update_dnet();
+
+			update_decals_text(text);
+			sprintf(full_text,"%s   ***   %s",text,text);
+			len = gdk_string_width(panel->textstyle->font,text);
+
+			update_krells();
+		}
+
+		if(len > gk_width)
+		{
+			x_scroll = (x_scroll + 1) % (len + separator_len);
+			decal_wu->x_off = gk_width - x_scroll - len;
+			gkrellm_draw_decal_text(panel,decal_wu,full_text,-1);
+		}
+		else
+		{
+			x_scroll = decal_wu->x_off = 0;
+			gkrellm_draw_decal_text(panel,decal_wu,text,-1);
+		}
+
 		gkrellm_draw_layers(panel);
 	}
 }
@@ -259,6 +282,7 @@ create_plugin(GtkWidget *vbox, gint first_create)
 	TextStyle       *ts;
 	GdkImlibImage   *krell_image;
 	gint y;
+	gchar text[96] = "dnet";
 
 	gkrellm_vbox = vbox;
 
@@ -289,7 +313,8 @@ create_plugin(GtkWidget *vbox, gint first_create)
     gkrellm_monitor_height_adjust(panel->h);
 
 	/* Draw initial text in decals and krells */
-	update_decals_text();
+	update_decals_text(text);
+	gkrellm_draw_decal_text(panel,decal_wu,text,-1);
 	update_krells();
 
 	if (first_create)
@@ -302,6 +327,10 @@ create_plugin(GtkWidget *vbox, gint first_create)
 	}
 
 	gkrellm_draw_layers(panel);
+
+	/* some scroll init. */
+	separator_len = gdk_string_width(panel->textstyle->font,"   ***   ");
+	gk_width = gkrellm_chart_width() - (2 * style->margin) - 2;
 }
 
 static gchar *plugin_info_text[] = {

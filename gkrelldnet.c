@@ -203,7 +203,7 @@ static void update_decals_text(gchar *text)
 		}
 	}
 	else
-		snprintf(text,127,"dnet %s",GKRELLDNET_VERSION);
+		snprintf(text,127,"dnet");
 }
 
 static void update_krells(void)

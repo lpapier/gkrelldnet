@@ -3,7 +3,7 @@
 #define __DNETW_H__
 
 /* version string */
-#define GKRELLDNET_VERSION "0.7"
+#define GKRELLDNET_VERSION "0.8"
 
 /* Crunch-o-meter style (default: 2) */
 #define CRUNCH_AUTO    -1
@@ -13,6 +13,18 @@
 
 /* a shorter type ;-) */
 typedef unsigned long long int ulonglong;
+
+#define MAX_CPU 10
+
+/* structure to hold monitored values */
+struct dnetc_values {
+	char contest[4];             /* current contest */
+	int cmode;                  /* crun-o-meter mode */
+	int wu_in;                   /* work unit in input buffer */
+	int wu_out;                  /* work unit in output buffer */
+	int n_cpu;                   /* number of active cruncher */
+	ulonglong val_cpu[MAX_CPU];  /* current cruncher value */
+};
 
 #endif
 

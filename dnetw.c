@@ -29,6 +29,7 @@
 #include <unistd.h>
 #include <string.h>
 
+#include "shmem.h"
 #include "dnetw.h"
 
 #define BUF_SIZE 256
@@ -45,9 +46,6 @@ static	char **nargv = NULL;
 static  int nargc;
 /* tty file descriptor */
 static int fd = -1, tty_fd = -1;
-/* cpu crunch-o-meter */
-static ulonglong *val_cpu = NULL;
-static int *pos_cpu = NULL;
 /* monitor file fd */
 static char monfile[128] = "";
 static int mon_fd = -1;
@@ -64,16 +62,12 @@ static void clean_and_exit(char *text,int r)
 
 	if(text != NULL)
 		perror(text);
-	if(val_cpu != NULL)
-		free(val_cpu);
 	if(nargv != NULL)
 	{
 		for(i=0;i<nargc;i++)
 			free(nargv[i]);
 		free(nargv);
 	}
-	if(pos_cpu != NULL)
-		free(pos_cpu);
 	if(regex_flag)
 	{
 		regfree(&preg_in); regfree(&preg_out);
@@ -99,11 +93,13 @@ static void got_signal(int signum)
 	char buf[BUF_SIZE];
 	int lu;
 
+	/* child quit => dnet client quit */
 	if(signum == SIGCHLD)
 	{
 		wait(NULL);
 		clean_and_exit(NULL,0);
 	}
+	/* else we stop dnet client */
 	if(kill(fils,SIGQUIT) == -1)
 		clean_and_exit("kill",1);
 
@@ -270,7 +266,6 @@ int main(int argc,char *argv[])
 
 	int oflag = 0;
 	int contest_offset;
-	int cmode = CRUNCH_RELATIVE;
 
 	char *ttydev,*tmp;
 	char buf[BUF_SIZE],buf1[128],buf2[32];
@@ -278,10 +273,16 @@ int main(int argc,char *argv[])
 
 	regmatch_t pmatch[2];
 
-	char defcmd[] = "dnetc", logfile[128] = "stdout", contest[4] = "???";
+	char defcmd[] = "dnetc", logfile[128] = "stdout";
+	int pos_cpu[MAX_CPU];
 	char p[] = "a";
-	int log_fd,n_cpu = 1;
-	int wu_in = 0,wu_out = 0;
+	int log_fd;
+
+	struct dnetc_values dnv = {
+		"???", CRUNCH_RELATIVE,
+		0, 0, 1,
+		{ 0 }
+		};
 
 	/* check arguments */
 	while ((ch = getopt(argc, argv, "hdoql:c:")) != -1)
@@ -312,6 +313,15 @@ int main(int argc,char *argv[])
 	/* get monitor filename */
 	strcpy(monfile,argv[argc-1]);
 
+	/* continue in background if in quiet mode */
+	if(qflag == 1 && ((new_pid = fork()) != 0))
+	{
+		if(new_pid < 0)
+			clean_and_exit("forking daemon",1);
+		else
+			exit(0);
+	}
+
 	/* default command line */
 	if(nargv == NULL)
 		nargc = get_arg(&nargv,defcmd);
@@ -320,7 +330,7 @@ int main(int argc,char *argv[])
 	if(strcmp(logfile,"stdout") != 0)
 	{
 		if((log_fd = open(logfile, O_CREAT|O_WRONLY|O_APPEND, S_IRUSR|S_IWUSR|S_IRGRP|S_IROTH)) == -1)
-			clean_and_exit("open logfile",1);
+			clean_and_exit("opening logfile",1);
 		if(dup2(log_fd,1) == -1)
 			clean_and_exit("dup2",1);
 	}
@@ -341,7 +351,7 @@ int main(int argc,char *argv[])
 		contest_offset = 7;
 
 		/* force relative crunch-o-meter style */
-		cmode = CRUNCH_RELATIVE;
+		dnv.cmode = CRUNCH_RELATIVE;
 	}
 	else
 	{
@@ -353,23 +363,15 @@ int main(int argc,char *argv[])
 			clean_and_exit(NULL,1);
 		if(regcomp(&preg_proxy,"((Retrieved|Sent).+(stat..unit|packet)|Attempting.to.resolve|Connect(ing|ed).to)",REG_EXTENDED) !=0)
 			clean_and_exit(NULL,1);
-		if(regcomp(&preg_absolute,"#[0-9]+: [A-Z0-9]{3}:.+\\[[,0-9]+\\]",REG_EXTENDED) != 0)
-			clean_and_exit(NULL,1);
 
 		contest_offset = 0;
 	}
 
+	if(regcomp(&preg_absolute,"#[0-9]+: [A-Z0-9]{3}:.+\\[[,0-9]+\\]",REG_EXTENDED) != 0)
+		clean_and_exit(NULL,1);
 	if(regcomp(&preg_cruncher,"[0-9]+.cruncher.*started",REG_EXTENDED) != 0)
 		clean_and_exit(NULL,1);
 	regex_flag = 1;
-
-	/* continue in background if in quiet mode */
-	if(qflag == 1 && ((new_pid = fork()) != 0)) {
-		if(new_pid < 0)
-			clean_and_exit("forking daemon",1);
-		else
-			exit(0);
-	}
 
 	/* first get a tty */
 	if((fd = open(MASTER_PTY, O_RDWR)) == -1)
@@ -414,12 +416,17 @@ int main(int argc,char *argv[])
 	   || signal(SIGTERM,got_signal) == SIG_ERR)
 		clean_and_exit("signal",1);
 
+	/* some more init */
+	for(i=0;i<MAX_CPU;i++)
+		dnv.val_cpu[i] = 0;
+
+	/* main loop */
 	while((lu = mygets(fd,buf,BUF_SIZE)) > 0)
 	{
 		if(dflag)
 			fprintf(stderr,"buf[0] = %x\n<--\n%s\n-->\n",buf[0],buf);
 
-		if(val_cpu != NULL && (buf[1] == '.' || buf[lu-1] != '\n'))
+		if(buf[1] == '.' || buf[lu-1] != '\n')
 		{
 			if(dflag)
 				fprintf(stderr,"lu: %02d, ",lu);
@@ -432,26 +439,28 @@ int main(int argc,char *argv[])
 				if(regexec(&preg_absolute,buf,1,pmatch,0) == 0)
 				{
 					/* set crunch-o-meter mode */
-					cmode = CRUNCH_ABSOLUTE;
+					dnv.cmode = CRUNCH_ABSOLUTE;
 					/* read CPU num */
 					i = strtol(&buf[pmatch[0].rm_so+1],(char **) NULL,10) - 1;
+					/* avoid core dump */
+					i %= MAX_CPU;
 					/* read k(keys|nodes) */
-					val_cpu[i] = extract_val(&buf[pmatch[0].rm_so]);
+					dnv.val_cpu[i] = extract_val(&buf[pmatch[0].rm_so]);
 					
 					if(dflag)
 					{
-						fprintf(stderr,"\ncpu = %d, %llu nodes|keys\n",i,val_cpu[i]);
+						fprintf(stderr,"\ncpu = %d, %llu nodes|keys\n",i,dnv.val_cpu[i]);
 						fprintf(stderr,"found: %s\n",&buf[pmatch[0].rm_so]);
 					}
 				}
 				else
 				{
 					/* set crunch-o-meter mode */
-					cmode = CRUNCH_RELATIVE;
+					dnv.cmode = CRUNCH_RELATIVE;
 
-					for(i=0;i<n_cpu;i++)
+					for(i=0;i<dnv.n_cpu;i++)
 					{
-						if(n_cpu != 1)
+						if(dnv.n_cpu != 1)
 						{
 							p[0] = 'a' + i;
 							if((tmp = strstr(buf,p)) != NULL)
@@ -460,12 +469,12 @@ int main(int argc,char *argv[])
 						else
 							pos_cpu[i] = lu - 1;
 						
-						val_cpu[i] = (pos_cpu[i] - (pos_cpu[i]/8)*3) * 2;
-						if(val_cpu[i] > 100)
-							val_cpu[i] = 100;
+						dnv.val_cpu[i] = (pos_cpu[i] - (pos_cpu[i]/8)*3) * 2;
+						if(dnv.val_cpu[i] > 100)
+							dnv.val_cpu[i] = 100;
 						
 						if(dflag)
-							fprintf(stderr,"cpu%d: %llu,",i,val_cpu[i]);
+							fprintf(stderr,"cpu%d: %llu,",i,dnv.val_cpu[i]);
 					}
 					if(dflag)
 						fprintf(stderr,"\n");
@@ -480,21 +489,28 @@ int main(int argc,char *argv[])
 		else
 		{
 			if(regexec(&preg_in,buf,1,pmatch,0) == 0)
-				wu_in = strtol(&buf[pmatch[0].rm_so],NULL,10);
+				dnv.wu_in = strtol(&buf[pmatch[0].rm_so],NULL,10);
 			if(regexec(&preg_out,buf,1,pmatch,0) == 0)
-				wu_out = strtol(&buf[pmatch[0].rm_so],NULL,10);
+				dnv.wu_out = strtol(&buf[pmatch[0].rm_so],NULL,10);
 			if(regexec(&preg_contest,buf,1,pmatch,0) == 0)
-				strncpy(contest,&buf[pmatch[0].rm_so+contest_offset],3);
-			if(val_cpu == NULL
-			   && regexec(&preg_cruncher,buf,1,pmatch,0) == 0)
+				strncpy(dnv.contest,&buf[pmatch[0].rm_so+contest_offset],3);
+			if(regexec(&preg_cruncher,buf,1,pmatch,0) == 0)
 			{
-				n_cpu = strtol(&buf[pmatch[0].rm_so],NULL,10);
+				dnv.n_cpu = strtol(&buf[pmatch[0].rm_so],NULL,10);
+				/* too many crunchers */
+				if(dnv.n_cpu > MAX_CPU)
+				{
+					fprintf(stderr,"dnetw: too many crunchers\n");
+					clean_and_exit(NULL,1);
+				}
 
 				/* allocate some RAM ;-) */
-				if((val_cpu = (ulonglong *) calloc(n_cpu,sizeof(ulonglong))) == NULL)
-					clean_and_exit("calloc",1);
-				if((pos_cpu = (int *) calloc(n_cpu,sizeof(int))) == NULL)
-					clean_and_exit("calloc",1);
+/*
+  if((dnv.val_cpu = (ulonglong *) calloc(dnv.n_cpu,sizeof(ulonglong))) == NULL)
+  clean_and_exit("calloc",1);
+  if((pos_cpu = (int *) calloc(dnv.n_cpu,sizeof(int))) == NULL)
+  clean_and_exit("calloc",1);
+*/
 			}
 
 			if(!qflag)
@@ -504,17 +520,13 @@ int main(int argc,char *argv[])
 		}
 
 		/* monitor output */
-		sprintf(buf1,"%s %d %d %d %d",contest,cmode,wu_in,wu_out,n_cpu);
-		if(val_cpu != NULL)
+		sprintf(buf1,"%s %d %d %d %d",dnv.contest,dnv.cmode,dnv.wu_in,dnv.wu_out,dnv.n_cpu);
+		for(i=0;i<dnv.n_cpu;i++)
 		{
-			for(i=0;i<n_cpu;i++)
-			{
-				sprintf(buf2," %llu",val_cpu[i]);
-				strcat(buf1,buf2);
-			}
+			sprintf(buf2," %llu",dnv.val_cpu[i]);
+			strcat(buf1,buf2);
 		}
-		else
-			strcat(buf1," 0");
+		
 		strcat(buf1,"\n");
 		write(mon_fd,buf1,strlen(buf1));
 	}

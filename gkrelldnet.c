@@ -41,7 +41,7 @@ static gint		style_id;
 
 /* config widgets */
 static GtkWidget *entry_mon_file,*button_enable;
-static GtkWidget *entry_format_str;
+static GtkWidget *entry_format_str, *entry_start_cmd;
 static GtkWidget *check_timeout_spin_button;
 
 typedef struct
@@ -65,7 +65,7 @@ static DnetMon dnetmon = {
 	0, 0,
 	NULL,
 	"???",
-	"dnetw -q ", "dnetc -quiet -shutdown"
+	"dnetw -q", "dnetc -quiet -shutdown"
 };
 
 /*  update dnet values */
@@ -236,6 +236,7 @@ static gint cb_button_press(GtkWidget *widget, GdkEventButton *ev)
 	if(ev->button == 1)
 	{
 		strcpy(command,dnetmon.start_cmd);
+		strcat(command," ");
 		strcat(command,dnetmon.file);
 	}
 		
@@ -314,7 +315,7 @@ static gchar *plugin_info_text[] = {
 	"\t- start/stop dnet client on mouse button click.\n\n",
 	"<b>Mouse Button Actions:\n\n",
 	"<b>\tLeft ",
-	"click start a new dnet client (dnetw -q -l <monitor file>).\n",
+	"click start a new dnet client (default: dnetw -q <monitor file>).\n",
 	"<b>\tRight ",
 	"click stop all dnet client (dnetc -quiet -shutdown).\n\n",
 	"<b>Configuration:\n\n",
@@ -333,6 +334,10 @@ static gchar *plugin_info_text[] = {
 	"is the percentage in current block/stub for ",
 	"<i>n",
 	"th dnet cruncher ($p <=> $p0)\n\n",
+	"<b>\tStart Command\n",
+	"\t\tCommand line used to start the dnet client on left mouse button click\n",
+	"<b>\t\tDo not add the monitor file in the command. ",
+	"The plugin will do it for you.\n\n",
 	"<b>\tMonitor File\n",
 	"\tSet the file used by the Distributed.net client wrapper 'dnetw' to communicate\n",
 	"\twith monitoring applications (default: /tmp/dnetw.log).\n"
@@ -370,6 +375,14 @@ static void create_dnet_tab(GtkWidget *tab)
 	entry_format_str = gtk_entry_new_with_max_length(127);
 	gtk_entry_set_text(GTK_ENTRY(entry_format_str),dnetmon.format_string);
 	gtk_box_pack_start(GTK_BOX(hbox), entry_format_str, FALSE, FALSE, 4);
+	gtk_container_add(GTK_CONTAINER(vbox),hbox);
+
+	hbox = gtk_hbox_new(FALSE, 0);
+	label = gtk_label_new("Start Command");
+	gtk_box_pack_start(GTK_BOX(hbox), label, FALSE, FALSE, 4);
+	entry_start_cmd = gtk_entry_new_with_max_length(127);
+	gtk_entry_set_text(GTK_ENTRY(entry_start_cmd),dnetmon.start_cmd);
+	gtk_box_pack_start(GTK_BOX(hbox), entry_start_cmd, FALSE, FALSE, 4);
 	gtk_container_add(GTK_CONTAINER(vbox),hbox);
 
 	hbox = gtk_hbox_new(FALSE, 0);
@@ -425,6 +438,7 @@ static void save_config(FILE *f)
 	fprintf(f,"%s check_timeout %d\n",CONFIG_KEYWORD,dnetmon.check_timeout);
 	fprintf(f,"%s logfile %s\n",CONFIG_KEYWORD,dnetmon.file);
 	fprintf(f,"%s format_string %s\n",CONFIG_KEYWORD,dnetmon.format_string);
+	fprintf(f,"%s start_command %s\n",CONFIG_KEYWORD,dnetmon.start_cmd);
 }
 
 static void load_config(gchar *arg)
@@ -441,6 +455,8 @@ static void load_config(gchar *arg)
 		strcpy(dnetmon.file,item);
 	else if(!strcmp("format_string",config))
 		strcpy(dnetmon.format_string,item);
+	else if(!strcmp("start_command",config))
+		strcpy(dnetmon.start_cmd,item);
 }
 
 static void apply_config(void)
@@ -454,6 +470,8 @@ static void apply_config(void)
 	strcpy(dnetmon.file,s);
 	s = gtk_entry_get_text(GTK_ENTRY(entry_format_str));
 	strcpy(dnetmon.format_string,s);
+	s = gtk_entry_get_text(GTK_ENTRY(entry_start_cmd));
+	strcpy(dnetmon.start_cmd,s);
    
 	/* delete old panel */
 	if(panel != NULL)

@@ -1,5 +1,5 @@
 /* GKrelldnet
-|  Copyright (C) 2000 Laurent Papier
+|  Copyright (C) 2000-2001 Laurent Papier
 |
 |  Author:  Laurent Papier <papier@linuxfan.com>
 |
@@ -48,18 +48,19 @@ static GtkWidget *check_timeout_spin_button;
 /* scroll vars */
 static gint gk_width, separator_len;
 /* buf. for CPU percentage */
-static gint *buf_cpu_percent;
+static guint64 *buf_cpu_val;
 
 /* config. and monitored value */
 typedef struct
 {
 	gboolean enable;                     /* enable plugin */
 	gint check_timeout;                  /* sec. between update */
+	gint mode;                           /* crunch-o-meter mode */
 	gchar file[256];                     /* monitoring file */
 	gchar format_string[64];             /* output format string */
 	gint n_cpu;                          /* num. of active crunchers */
 	gint wu_in, wu_out;                  /* i/O work units */
-	gint *cpu_percent;                   /* cruncher % done */
+	guint64 *cpu_val;                      /* cruncher value */
 	gchar contest[4];                    /* current contest */
 	gchar start_cmd[128];                /* start dnet client cmd */
 	gchar stop_cmd[128];                 /* stop dnet client cmd */
@@ -68,8 +69,8 @@ typedef struct
 
 /* default plugin config. */
 static DnetMon dnetmon = {
-	TRUE, 2,
-	"/tmp/dnetw.mon", "$c:$i / $o",
+	TRUE, 2, CRUNCH_RELATIVE,
+	"/tmp/dnetw.mon", "$c: $i/$o",
 	1,
 	0, 0,
 	NULL,
@@ -83,19 +84,19 @@ static void update_dnet(void)
 {
 	struct stat buf;
 	FILE *fd;
-	gint *ti;
+	guint64 *ti;
 	gchar tmp[128], *t2;
 	gint pos,ncpu,i;
 
 	/* swap CPU value */
-	ti = buf_cpu_percent;
-	buf_cpu_percent = dnetmon.cpu_percent;
-	dnetmon.cpu_percent = ti;
+	ti = buf_cpu_val;
+	buf_cpu_val = dnetmon.cpu_val;
+	dnetmon.cpu_val = ti;
 	
 	/* init. */
 	dnetmon.wu_in = dnetmon.wu_out = 0;
 	for(i=0;i<dnetmon.n_cpu;i++)
-		dnetmon.cpu_percent[i] = 0;
+		dnetmon.cpu_val[i] = 0;
 	strcpy(dnetmon.contest,"???");
 
 	/* get file size */
@@ -122,36 +123,37 @@ static void update_dnet(void)
 		/* read lines */
 		while(fgets(tmp,128,fd) != NULL)
 		{
-			sscanf(tmp,"%s %d %d %d",dnetmon.contest,&dnetmon.wu_in,&dnetmon.wu_out,&ncpu);
+			sscanf(tmp,"%s %d %d %d %d",dnetmon.contest,&dnetmon.mode,&dnetmon.wu_in,&dnetmon.wu_out,&ncpu);
+
 			/* more CPU ! */
 			if(ncpu > dnetmon.n_cpu)
 			{
 				/* free old RAM */
-				free(dnetmon.cpu_percent);
+				free(dnetmon.cpu_val);
 				/* allocate RAM for cpu monitoring */
-				if((dnetmon.cpu_percent = calloc(ncpu,sizeof(gint))) == NULL
-				   || (ti = calloc(ncpu,sizeof(gint))) == NULL)
+				if((dnetmon.cpu_val = calloc(ncpu,sizeof(guint64))) == NULL
+				   || (ti = calloc(ncpu,sizeof(guint64))) == NULL)
 				{
 					fclose(fd);
 					return;
 				}
 				/* copy old CPU value */
 				for(i=0;i<dnetmon.n_cpu;i++)
-					ti[i] = buf_cpu_percent[i];
+					ti[i] = buf_cpu_val[i];
 				for(i=dnetmon.n_cpu;i<ncpu;i++)
 					ti[i] = 0;
 				/* free old mem */
-				free(buf_cpu_percent);
-				buf_cpu_percent = ti;
+				free(buf_cpu_val);
+				buf_cpu_val = ti;
 			}
 			/* update number of crunchers */
 			dnetmon.n_cpu = ncpu;
-			/* read CPU % */
+			/* read CPU val */
 			for(i=dnetmon.n_cpu-1;i>=0;i--)
 			{
 				if((t2 = strrchr(tmp,' ')) != NULL)
 				{
-					dnetmon.cpu_percent[i] = strtol(t2,NULL,10);
+					sscanf(t2,"%llu",&dnetmon.cpu_val[i]);
 					t2[0] = '\0';
 				}
 			}
@@ -162,7 +164,7 @@ static void update_dnet(void)
 	{
 		/* packet done */
 		if(dnetmon.pck_done_cmd[0] != '\0'
-		   && dnetmon.cpu_percent[i] < buf_cpu_percent[i])
+		   && dnetmon.cpu_val[i] < buf_cpu_val[i])
 		{
 			strcpy(tmp,dnetmon.pck_done_cmd);
 			strcat(tmp," &");
@@ -173,10 +175,40 @@ static void update_dnet(void)
 	fclose(fd);
 }
 
+/* format cpu val with suffix depending on crunch-o-meter mode */
+void sprint_cpu_val(char *buf,int max,guint64 val)
+{
+	gfloat tmp;
+
+	/* add suffix depending on crunch-o-meter mode */
+	switch(dnetmon.mode)
+	{
+		case CRUNCH_RELATIVE:
+			snprintf(buf,max,"%llu%",val);
+			break;
+		case CRUNCH_ABSOLUTE:
+			if(!strcmp(dnetmon.contest,"OGR"))
+			{
+				/* do auto-scale */
+				tmp = (float) (val / 1000000ULL);
+				snprintf(buf,max,"%.2f Gn",tmp/1000);
+			}
+			if(!strcmp(dnetmon.contest,"RC5"))
+			{
+				/* do auto-scale */
+				tmp = (float) (val / 1000ULL);
+				snprintf(buf,max,"%.2f Mk",tmp/1000);
+			}
+			
+			break;
+	}
+}
+
+
 /* update text in gkrellm decals */
 static void update_decals_text(gchar *text)
 {
-	gchar *s,buf[12];
+	gchar *s,buf[24];
 	gint t;
 
 	if(dnetmon.contest[0] != '?')
@@ -204,11 +236,11 @@ static void update_decals_text(gchar *text)
 						if(t >= 0 && t <= 9)
 						{
 							if(t < dnetmon.n_cpu)
-								snprintf(buf,12,"%d",dnetmon.cpu_percent[t]);
+								sprint_cpu_val(buf,24,dnetmon.cpu_val[t]);
 							s++;
 						}
 						else
-							snprintf(buf,12,"%d",dnetmon.cpu_percent[0]);
+							sprint_cpu_val(buf,24,dnetmon.cpu_val[0]);
 						s++;
 						break;
 					case 'c':
@@ -233,13 +265,16 @@ static void update_decals_text(gchar *text)
 static void update_krells(void)
 {
 	krell_percent->previous = 0;
-	gkrellm_update_krell(panel, krell_percent, dnetmon.cpu_percent[0]);
+	if(dnetmon.mode == CRUNCH_RELATIVE)
+		gkrellm_update_krell(panel, krell_percent, dnetmon.cpu_val[0]);
+	else
+		gkrellm_update_krell(panel, krell_percent, 0);
 }		
 
 static void update_plugin(void)
 {
 	static gint second_count = 0, x_scroll = 0, len = 0;
-	static gchar text[96] = "dnet";
+	static gchar text[128] = "dnet";
 	static gchar full_text[256];
 
 	if(dnetmon.enable)
@@ -388,18 +423,17 @@ static gchar *plugin_info_text[] = {
 	"<b>\tEnable Distributed.net monitor\n",
 	"\tIf you want to disable this plugin (default: enable).\n\n",
 	"<b>\tFormat String\n",
-	"\tThe text output format is controlled by this string (default: $c: $i / $o).\n",
-	"<b>\t\t$i ",
-	"is the input work units\n",
-	"<b>\t\t$o ",
-	"is the output work units\n",
-	"<b>\t\t$c/$C ",
-	"is the current contest in lowercase/uppercase\n",
-	"<b>\t\t$p",
-	"<i>n ",
-	"is the percentage in current block/stub for ",
-	"<i>n",
-	"th dnet cruncher ($p <=> $p0)\n\n",
+	"\tThe text output format is controlled by this string (default: $c: $i/$o).\n",
+	"<b>\t\t$i ", "is the input work units\n",
+	"<b>\t\t$o ", "is the output work units\n",
+	"<b>\t\t$c/$C ", "is the current contest in lowercase/uppercase\n",
+	"<b>\t\t$p", "<i>n ",
+	"is the progress indicator value in current block/stub on CPU #",
+	"<i>n", " ($p <=> $p0)\n\n",
+	"\tThe plugin now automaticaly add a suffix depending on the crunch-o-meter mode:\n",
+	"<b>\t\tMk", " (Mkeys) is added for RC5 contest in absolute mode.\n",
+	"<b>\t\tGn", " (Gnodes) is added for OGR contest in absolute mode.\n",
+	"<b>\t\t%", " is added in relative mode.\n\n",
 	"<b>\tStart Command\n",
 	"\t\tCommand line used to start the dnet client on left mouse button click\n",
 	"<b>\t\tDo not add the monitor file in the command. ",
@@ -497,11 +531,11 @@ static void create_dnet_tab(GtkWidget *tab)
 	about_text = g_strdup_printf(
 		"GKrellDnet %s\n" \
 		"GKrellM distributed.net Plugin\n\n" \
-		"Copyright (C) 2000 Laurent Papier\n" \
+		"Copyright (C) 2001 Laurent Papier\n" \
 		"papier@linuxfan.com\n" \
 		"http://gkrelldnet.sourceforge.net/\n\n" \
 		"Released under the GNU Public Licence",
-		DNET_VERSION);
+		GKRELLDNET_VERSION);
 	
 	text = gtk_label_new(about_text); 
 	label = gtk_label_new("About");
@@ -604,13 +638,13 @@ init_plugin()
 	int i;
 
 	/* allocate RAM for cpu monitoring */
-	if((dnetmon.cpu_percent = calloc(dnetmon.n_cpu,sizeof(gint))) == NULL
-	   || (buf_cpu_percent = calloc(dnetmon.n_cpu,sizeof(gint))) == NULL)
+	if((dnetmon.cpu_val = calloc(dnetmon.n_cpu,sizeof(guint64))) == NULL
+	   || (buf_cpu_val = calloc(dnetmon.n_cpu,sizeof(guint64))) == NULL)
 		return NULL;
 	for(i=0;i<dnetmon.n_cpu;i++)
 	{
-		dnetmon.cpu_percent[i] = 0;
-		buf_cpu_percent[i] = 0;
+		dnetmon.cpu_val[i] = 0;
+		buf_cpu_val[i] = 0;
 	}
 
 	style_id = gkrellm_add_meter_style(&plugin_mon, STYLE_NAME);

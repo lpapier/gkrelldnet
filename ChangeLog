@@ -1,6 +1,11 @@
 GKrellM plugin ChangeLog
 ------------------------
 
+0.7 Mon Feb 05, 2001
+	* new: add support for the new absolute crunch-o-meter style.
+	* chg: now the plugin automaticaly add a suffix to the crunch-o-meter
+	value. You will need to update your config.
+	
 0.6 Sat Nov 04, 2000
 	* fix: little improvements in the pref GUI layout.
 	* new: configurable command started on every packet completion.
@@ -25,6 +30,11 @@ GKrellM plugin ChangeLog
 
 dnetw ChangeLog
 ---------------
+
+0.7 Mon Feb 05, 2001
+	* fix: small bug in dnetc output parsing if there are more than 9
+	packets in the output buffer.
+	* new: add support for the new absolute crunch-o-meter style.
 
 0.6.1 Sat Dec 02, 2000
 	* fix: incorrect version number ;-)

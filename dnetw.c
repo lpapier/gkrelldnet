@@ -1,5 +1,5 @@
 /* dnetw: a distributed.net client wrapper
-|  Copyright (C) 2000 Laurent Papier
+|  Copyright (C) 2000-2001 Laurent Papier
 |
 |  Author:  Laurent Papier    papier@linuxfan.com
 |
@@ -29,6 +29,7 @@
 #include <unistd.h>
 #include <string.h>
 
+#include "dnetw.h"
 
 #define BUF_SIZE 256
 #define MASTER_PTY "/dev/ptmx"
@@ -45,14 +46,15 @@ static  int nargc;
 /* tty file descriptor */
 static int fd = -1, tty_fd = -1;
 /* cpu crunch-o-meter */
-static int *percent_cpu = NULL, *pos_cpu = NULL;
+static ulonglong *val_cpu = NULL;
+static int *pos_cpu = NULL;
 /* monitor file fd */
 static char monfile[128] = "";
 static int mon_fd = -1;
 /* regex */
 static int regex_flag = 0;
 static regex_t preg_in, preg_out, preg_contest, preg_cruncher;
-static regex_t preg_proxy;
+static regex_t preg_proxy, preg_absolute;
 
 
 /* clean exit function */
@@ -62,8 +64,8 @@ static void clean_and_exit(char *text,int r)
 
 	if(text != NULL)
 		perror(text);
-	if(percent_cpu != NULL)
-		free(percent_cpu);
+	if(val_cpu != NULL)
+		free(val_cpu);
 	if(nargv != NULL)
 	{
 		for(i=0;i<nargc;i++)
@@ -76,7 +78,7 @@ static void clean_and_exit(char *text,int r)
 	{
 		regfree(&preg_in); regfree(&preg_out);
 		regfree(&preg_contest); regfree(&preg_cruncher);
-		regfree(&preg_proxy);
+		regfree(&preg_proxy); regfree(&preg_absolute);
 	}
 	if(mon_fd != -1)
 	{
@@ -146,6 +148,36 @@ static void change_dir(void)
 	}
 }
 
+/* extract keys or nodes from dnetc output */
+static ulonglong extract_val(char *buf)
+{
+	char line[BUF_SIZE],t[24],*tmp;
+	ulonglong val = 0;
+	int i,j;
+
+	/* make a local copy of line */
+	strcpy(line,buf);
+
+	/* search for first '[' char */
+	tmp = strtok(line,"[");
+	if(tmp != NULL)
+	{
+		tmp = strtok(NULL,"]");
+		if(tmp != NULL)
+		{
+			for(i=0,j=0;i<strlen(tmp);i++)
+				if(tmp[i] != ',')
+					t[j++] = tmp[i];
+			t[j] = '\0';
+			sscanf(t,"%llu",&val);
+			if(dflag)
+				printf("-> val = %llu\n",val);
+		}
+	}
+
+	return val;
+}
+
 /* read arg for '-c' option */
 int get_arg(char ***args, char *str)
 {
@@ -188,7 +220,6 @@ int mygets(int fd,char *buf,int count)
 	static char tmp[2*BUF_SIZE] = "";
 	char *t = NULL;
 	int s,p;
-	int i = 0;
 
 	strcpy(buf,tmp);
 	p = strlen(buf);
@@ -222,11 +253,11 @@ int mygets(int fd,char *buf,int count)
 
 static void usage(char *pname)
 {
-	fprintf(stderr,"Distributed.net client wrapper 0.6.1\n");
+	fprintf(stderr,"Distributed.net client wrapper %s\n",GKRELLDNET_VERSION);
 	fprintf(stderr,"usage: %s [-q] [-l<file>] [-c<cmd>] <monitor_file>\n",pname);
 	fprintf(stderr," -q: disable all terminal output and run in background\n");
-	fprintf(stderr," -o: old log format (dnetc v2.8010 and prior)\n");
-	fprintf(stderr," -l<log_file>: redirect the client output in <file>\n");
+	fprintf(stderr," -o: old log format (dnetc v2.8010 and lower)\n");
+	fprintf(stderr," -l<log_file>: redirect the client output to <file>\n");
 	fprintf(stderr," -c<cmd>: use <cmd> to start the dnetc client (default: 'dnetc')\n");
 	clean_and_exit(NULL,0);
 }
@@ -239,9 +270,10 @@ int main(int argc,char *argv[])
 
 	int oflag = 0;
 	int contest_offset;
+	int cmode = CRUNCH_RELATIVE;
 
 	char *ttydev,*tmp;
-	char buf[BUF_SIZE],buf1[64],buf2[16];
+	char buf[BUF_SIZE],buf1[128],buf2[32];
 	int ttylog,lu,i,q;
 
 	regmatch_t pmatch[2];
@@ -307,16 +339,21 @@ int main(int argc,char *argv[])
 			clean_and_exit(NULL,1);
 
 		contest_offset = 7;
+
+		/* force relative crunch-o-meter style */
+		cmode = CRUNCH_RELATIVE;
 	}
 	else
 	{
 		if(regcomp(&preg_in,"[0-9]+.packets?.+remains?.in",REG_EXTENDED) != 0)
 			clean_and_exit(NULL,1);
-		if(regcomp(&preg_out,"[0-9]+.packets?.+in.buff-out",REG_EXTENDED) != 0)
+		if(regcomp(&preg_out,"[0-9]+.packets?(.+in.buff-out|.\\(.+stats?.units?\\).are.in)",REG_EXTENDED) != 0)
 			clean_and_exit(NULL,1);
 		if(regcomp(&preg_contest,"[A-Z0-9]{3}:.Loaded",REG_EXTENDED) != 0)
 			clean_and_exit(NULL,1);
 		if(regcomp(&preg_proxy,"((Retrieved|Sent).+(stat..unit|packet)|Attempting.to.resolve|Connect(ing|ed).to)",REG_EXTENDED) !=0)
+			clean_and_exit(NULL,1);
+		if(regcomp(&preg_absolute,"#[0-9]+: [A-Z0-9]{3}:.+\\[[,0-9]+\\]",REG_EXTENDED) != 0)
 			clean_and_exit(NULL,1);
 
 		contest_offset = 0;
@@ -382,35 +419,57 @@ int main(int argc,char *argv[])
 		if(dflag)
 			fprintf(stderr,"buf[0] = %x\n<--\n%s\n-->\n",buf[0],buf);
 
-		if(percent_cpu != NULL && (buf[1] == '.' || buf[lu-1] != '\n'))
+		if(val_cpu != NULL && (buf[1] == '.' || buf[lu-1] != '\n'))
 		{
 			if(dflag)
 				fprintf(stderr,"lu: %02d, ",lu);
 
-			/* a line with proxy comm. */
+			/* skip line with proxy comm. */
 			q = regexec(&preg_proxy,buf,1,pmatch,0);
 			if(q != 0)
 			{
-				for(i=0;i<n_cpu;i++)
+				/* check if line match absolute crunch-o-meter */
+				if(regexec(&preg_absolute,buf,1,pmatch,0) == 0)
 				{
-					if(n_cpu != 1)
-					{
-						p[0] = 'a' + i;
-						if((tmp = strstr(buf,p)) != NULL)
-							pos_cpu[i] = tmp - buf;
-					}
-					else
-						pos_cpu[i] = lu - 1;
+					/* set crunch-o-meter mode */
+					cmode = CRUNCH_ABSOLUTE;
+					/* read CPU num */
+					i = strtol(&buf[pmatch[0].rm_so+1],(char **) NULL,10) - 1;
+					/* read k(keys|nodes) */
+					val_cpu[i] = extract_val(&buf[pmatch[0].rm_so]);
 					
-					percent_cpu[i] = (pos_cpu[i] - (pos_cpu[i]/8)*3) * 2;
-					if(percent_cpu[i] > 100)
-						percent_cpu[i] = 100;
-
 					if(dflag)
-						fprintf(stderr,"cpu%d: %d,",i,percent_cpu[i]);
+					{
+						fprintf(stderr,"\ncpu = %d, %llu nodes|keys\n",i,val_cpu[i]);
+						fprintf(stderr,"found: %s\n",&buf[pmatch[0].rm_so]);
+					}
 				}
-				if(dflag)
-					fprintf(stderr,"\n");
+				else
+				{
+					/* set crunch-o-meter mode */
+					cmode = CRUNCH_RELATIVE;
+
+					for(i=0;i<n_cpu;i++)
+					{
+						if(n_cpu != 1)
+						{
+							p[0] = 'a' + i;
+							if((tmp = strstr(buf,p)) != NULL)
+								pos_cpu[i] = tmp - buf;
+						}
+						else
+							pos_cpu[i] = lu - 1;
+						
+						val_cpu[i] = (pos_cpu[i] - (pos_cpu[i]/8)*3) * 2;
+						if(val_cpu[i] > 100)
+							val_cpu[i] = 100;
+						
+						if(dflag)
+							fprintf(stderr,"cpu%d: %llu,",i,val_cpu[i]);
+					}
+					if(dflag)
+						fprintf(stderr,"\n");
+				}
 			}
 
 			if(!qflag && (ttylog || q == 0))
@@ -426,13 +485,13 @@ int main(int argc,char *argv[])
 				wu_out = strtol(&buf[pmatch[0].rm_so],NULL,10);
 			if(regexec(&preg_contest,buf,1,pmatch,0) == 0)
 				strncpy(contest,&buf[pmatch[0].rm_so+contest_offset],3);
-			if(percent_cpu == NULL
+			if(val_cpu == NULL
 			   && regexec(&preg_cruncher,buf,1,pmatch,0) == 0)
 			{
 				n_cpu = strtol(&buf[pmatch[0].rm_so],NULL,10);
 
 				/* allocate some RAM ;-) */
-				if((percent_cpu = (int *) calloc(n_cpu,sizeof(int))) == NULL)
+				if((val_cpu = (ulonglong *) calloc(n_cpu,sizeof(ulonglong))) == NULL)
 					clean_and_exit("calloc",1);
 				if((pos_cpu = (int *) calloc(n_cpu,sizeof(int))) == NULL)
 					clean_and_exit("calloc",1);
@@ -445,12 +504,12 @@ int main(int argc,char *argv[])
 		}
 
 		/* monitor output */
-		sprintf(buf1,"%s %d %d %d",contest,wu_in,wu_out,n_cpu);
-		if(percent_cpu != NULL)
+		sprintf(buf1,"%s %d %d %d %d",contest,cmode,wu_in,wu_out,n_cpu);
+		if(val_cpu != NULL)
 		{
 			for(i=0;i<n_cpu;i++)
 			{
-				sprintf(buf2," %d",percent_cpu[i]);
+				sprintf(buf2," %llu",val_cpu[i]);
 				strcat(buf1,buf2);
 			}
 		}
@@ -461,5 +520,6 @@ int main(int argc,char *argv[])
 	}
 
 	clean_and_exit(NULL,0);
-}
 
+	return 0;
+}

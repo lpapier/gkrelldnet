@@ -1,5 +1,5 @@
 
-Copyright (c) 2000 by Laurent Papier.  This program is free software
+Copyright (c) 2000-2001 by Laurent Papier.  This program is free software
 which I release under the GNU General Public License.
 
 Description
@@ -17,39 +17,40 @@ Requirements
 
 GKrellDnet provides
 ===================
-* a distibuted.net client wrapper to make it possible to write monitoring
-  applets.
-  It's possible to monitor the client activity without the
-  wrapper but then it's not possible to have the % done in the current
-  stub/block. This is because the client doesn't print the crunch'o'meter if
-  the client output is not a tty. And this is why I have write this wrapper.
+* a distibuted.net client wrapper to make possible to write monitoring applets.
+  It's possible to monitor the client activity without a wrapper but to
+  monitor the crunch-o-meter. This is because the client doesn't print the
+  crunch'o'meter if the client output is not a tty.
+  This is why I have written this wrapper.
 
 * a GKrellM plugin.
   This plugin features (see also 'Info' in plugin config.)
     - monitor input/output work units
     - monitor current contest
-    - percentage done in current block/stub
+    - monitor the crunch-o-meter (support both relative and absolute style)
     - start/stop the dnet client on left/right mouse button click
-    - configurable text output
-    - configurable command to start on every packet completion
+    - user configurable text output
+    - user configurable command to start on every packet completion (like play
+      a sound
 
 Limitation
 ==========
 * the plugin only support up to 10 CPU ;-)
 * on multi-proc. system, you will get inaccurate contest report if not all
-  crunchers work on the same contest.
+  crunchers work on the same contest. Sorry but the output of the dnet client
+  is not very readable in that case even for a computer ;-)
 * see TODO file.
 
 
 Installation
 ============
-compile both the dnet wrapper 'dnetw' and the GKrellDnet plugin:
+First, compile both the dnet wrapper 'dnetw' and the GKrellDnet plugin:
 
-tar xvfI gkrelldnet-X.Y.tar.bz2
+tar xvfz gkrelldnet-X.Y.tar.gz
 cd gkrelldnet-X.Y
 make
 
-install the GKrellDnet plugin in ~/.gkrellm/plugins:
+To install the GKrellDnet plugin in ~/.gkrellm/plugins:
 make install
 
 then you need to copy the wrapper 'dnetw' somewhere in your path. I choose to
@@ -58,23 +59,28 @@ directory in my path.
 
 It is very important for the plugin to work, that BOTH dnetc and dnetw are in
 your path. Please check your PATH variable.
+In fact, gkrellm need that both 'dnetc' AND 'dnetw' are in his PATH variable.
+
+NOTE: you don't need to be root to install this package.
 
 
 Usage
 =====
 
-First you need to setup your dnet client.
-Now, you can use the wrapper to start the dnet client or you can left click in
-the GKrellM plugin (be sure that the 'dnetc' executable is in your path).
+First you need to setup your dnet client. Please see dnetc documentation.
+Now, you must use the wrapper to start the dnet client or you can left click in
+the GKrellM plugin (be sure that the 'dnetc' executable is in the PATH of
+gkrellm, see install section).
 
 VERY IMPORTANT:
 ---------------
 dnetw only works if you DO NOT redirect the client output to a file.
 The client output MUST be stdout. So check your client configuration.
-The new absolute style crunch-o-meter is not supported so if you, like me,
-works on OGR force the crunch-o-meter to relative style (read dnetc doc).
+The new absolute style crunch-o-meter is supported in v0.7, so you can set
+relative or absolute mode in the dnet client config.
+Currently, 'live-rate' is not supported. Wait for the next release.
 
-If you want to redirect the dnet client to a file you must use the dnetw
+If you want to redirect the dnet client to a file you must use dnetw
 option '-l'.
 
 ex: dnetw -l dnet.log /tmp/dnetw.log
@@ -105,30 +111,37 @@ This wrapper will write activity information in a file. The last line of this
 file contain the most recent information.
 The line format is (ASCII text):
 current contest
+crunch-o-meter style (1 = absolute, 2 = relative)
 work units in input buffer
 work units in output buffer
 number of cpu
-percentage for cpu 0
-percentage for cpu 1
+value for cpu 0
+value for cpu 1
 ...
 
-ex (1 cpu): RC5 24 2 1 45
+ex (1 cpu): RC5 2 24 2 1 45
 RC5 contest, 24 work units in input buffer, 2 in output buffer, 1 cpu and
-45% done in current packet.
-ex (2 cpu): OGR 12 8 2 24 78
+45% done in current packet (relative crunch-o-meter).
+ex (2 cpu): OGR 1 12 8 2 167112859822 23049650
 OGR contest, 12 work units in input buffer, 8 in output buffer, 2 cpu and
-24% done in current stub for cpu0, 78% for cpu1.
+167 Gnodes done on CPU #1 and 23 Mnodes done on CPU #2 (absolute
+crunch-o-meter)
 
 
-Misc.
-=====
+Open source make it possible
+============================
 I have start writing a gkrellm plugin to monitor the dnetw output. But you can
 write your own monitoring applet (WindowMaker Dock, Gnome/KDE applets or
 epplets), I will only work on the wrapper 'dnetw' and the gkrellm plugin.
 
-Both the wrapper and the plugin seem stable.
+Both the wrapper and the plugin seem stable on my system (RedHat 7.0).
 If you have problems, first check installation and usage section of this file.
 If you still have problems you can contact me.
 
 Laurent Papier
 papier@linuxfan.com
+
+
+Thanks to
+=========
+Bill Wilson <bill@gkrellm.net> for this really great monitoring tool.

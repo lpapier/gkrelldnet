@@ -79,7 +79,7 @@ static void clean_and_exit(char *text,int r)
 	if((int) shmem != -1 && shmem != NULL)
 	{
 		shmem->running = FALSE;
-		shmctl(shmid, IPC_RMID, 0);
+		my_shmdel(shmid);
 		shmdt(shmem);
 	}
 	if(tty_fd != -1)
@@ -331,7 +331,7 @@ int main(int argc,char *argv[])
 	ttylog = isatty(1);
 
 	/* creat shared memory segment */
-	if((shmid = my_shmget(NULL,sizeof(struct dnetc_values),IPC_CREAT|IPC_EXCL|0660)) == -1)
+	if((shmid = my_shmcreate(sizeof(struct dnetc_values),IPC_CREAT|IPC_EXCL|0660)) == -1)
 		clean_and_exit("shmget",1);
 	if((int) (shmem = shmat(shmid,0,0)) == -1)
 		clean_and_exit("shmat",1);

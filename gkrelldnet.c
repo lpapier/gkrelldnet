@@ -30,9 +30,6 @@
 #include "gkrelldnet.h"
 
 
-#define LOOK_BACK 24*3
-
-
 /* Evil var! */
 static GtkWidget *gkrellm_vbox;
 
@@ -83,7 +80,7 @@ static void update_dnet2(void)
 	/* if shared memory not attached */
 	if(dnetmon.shmem == NULL)
 	{
-		if((shmid = my_shmget(NULL,sizeof(struct dnetc_values),0660)) == -1)
+		if((shmid = my_shmget(sizeof(struct dnetc_values),0660)) == -1)
 			return;
 		
 		if((int) (dnetmon.shmem = shmat(shmid,0,0)) == -1)

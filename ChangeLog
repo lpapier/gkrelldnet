@@ -1,9 +1,10 @@
 GKrellM plugin ChangeLog
 ------------------------
 
-0.4 Mon Aug 07, 2000
+0.4 Tue Aug 15, 2000
 	* support up to 10 CPU.
 	* configurable start command.
+	* scrolling text if text is larger than gkrellm width.
 	
 0.3 Sun Jul 30, 2000
 	* left mouse button start the dnet client.

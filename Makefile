@@ -1,15 +1,17 @@
 
-CFLAGS = -Wall -O2 `glib-config --cflags --libs`
-#CFLAGS = -Wall -O -g `glib-config --cflags --libs`
+CC = gcc
+CFLAGS = -Wall -O2 -D_GNU_SOURCE `glib-config --cflags`
+#CFLAGS = -Wall -O -g `glib-config --cflags`
+#LDFLAGS = -s
 
 all: dnetw gkrelldnet.so
 
 gkrelldnet.so: gkrelldnet.c
-	gcc $(CFLAGS) `imlib-config --cflags-gdk` -c gkrelldnet.c
-	gcc -shared -Wl -o gkrelldnet.so gkrelldnet.o
+	$(CC) $(CFLAGS) `imlib-config --cflags-gdk` -c gkrelldnet.c
+	$(CC) $(LDFLAGS) -shared -Wl -o gkrelldnet.so gkrelldnet.o
 
-dnetw: dnetw.c
-	gcc $(CFLAGS) $(LDFLAGS) -o dnetw dnetw.c
+dnetw: dnetw.o
+	$(CC) $(LDFLAGS) -o dnetw dnetw.o
 
 install:
 	cp gkrelldnet.so $(HOME)/.gkrellm/plugins

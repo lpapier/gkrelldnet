@@ -1,0 +1,22 @@
+GKrellDnet ChangeLog
+--------------------
+
+0.3 Sun Jul 30, 2000
+	* left mouse button start the dnet client.
+	* right mouse button stop the dnet client.
+	* add gravity for a better control of the plugin placement.
+	* configurable delay between data updates.
+
+0.2 Fri Jul 28, 2000
+	* First public release.
+
+
+dnetw ChangeLog
+---------------
+
+0.2 Sun Jul 30, 2000
+	* can really be started from any directory.
+	* add a quiet option -q.
+	
+0.1 Fri Jul 28, 2000
+	* First public release.

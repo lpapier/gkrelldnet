@@ -1,7 +1,7 @@
 /* GKrelldnet: a GKrellM plugin to monitor Distributed.net client
 |  Copyright (C) 2000-2001 Laurent Papier
 |
-|  Author:  Laurent Papier <papier@linuxfan.com>
+|  Author:  Laurent Papier <papier@tuxfan.net>
 |
 |  This program is free software which I release under the GNU General Public
 |  License. You may redistribute and/or modify this program under the terms
@@ -481,7 +481,7 @@ static void create_dnet_tab(GtkWidget *tab)
 		"GKrellDnet %s\n" \
 		"GKrellM distributed.net Plugin\n\n" \
 		"Copyright (C) 2001 Laurent Papier\n" \
-		"papier@linuxfan.com\n" \
+		"papier@tuxfan.net\n" \
 		"http://gkrelldnet.sourceforge.net/\n\n" \
 		"Released under the GNU Public Licence",
 		GKRELLDNET_VERSION);

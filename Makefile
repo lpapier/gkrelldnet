@@ -12,6 +12,9 @@ gkrelldnet.so: gkrelldnet.o shmem.o
 dnetw: dnetw.o shmem.o
 	$(CC) $(LDFLAGS) -o dnetw dnetw.o shmem.o
 
+dshm: dshm.o shmem.o
+	$(CC) $(LDFLAGS) -o dshm dshm.o shmem.o
+
 gkrelldnet.o: gkrelldnet.c
 	$(CC) $(CFLAGS) `pkg-config gtk+-2.0 --cflags` -c gkrelldnet.c
 
@@ -19,4 +22,4 @@ install:
 	cp gkrelldnet.so $(HOME)/.gkrellm2/plugins
 
 clean:
-	rm -f gkrelldnet.so dnetw *.o
+	rm -f gkrelldnet.so dnetw dshm *.o

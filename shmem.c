@@ -1,7 +1,7 @@
 /*
 |  Copyright (C) 2000-2001 Laurent Papier
 |
-|  Author:  Laurent Papier <papier@linuxfan.com>
+|  Author:  Laurent Papier <papier@tuxfan.net>
 |
 |  This program is free software which I release under the GNU General Public
 |  License. You may redistribute and/or modify this program under the terms

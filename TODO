@@ -3,10 +3,10 @@ dnetw:
 - improve % reading accuracy.
 - support SMP.
 - support for dnetc options.
+- support other Unix system (FreeBSD, ...)
+- chdir in dnetc dir (so dnetw can be launch from any dir
 
 gtkrellm plugin:
 - support SMP.
 - add a led for active/inactive state (as in gtkrelmms).
-- left button start/stop dnet client (configurable command line)
-- info page
-- user configurable delay between update
+- left button start dnet client (configurable command line)

@@ -8,9 +8,9 @@
 #define CONFIG_KEYWORD "dnet"
 #define	STYLE_NAME	"dnet"		  /* Theme subdirectory name and gkrellmrc */
 
-#define LOCATION MON_CPU
+#define LOCATION (MON_CPU | GRAVITY(12))
 
 #define DNET_MAJOR_VERSION 0
-#define DNET_MINOR_VERSION 2
+#define DNET_MINOR_VERSION 3
 
 #endif

@@ -11,6 +11,6 @@
 #define LOCATION MON_CPU
 
 #define DNET_MAJOR_VERSION 0
-#define DNET_MINOR_VERSION 1
+#define DNET_MINOR_VERSION 2
 
 #endif

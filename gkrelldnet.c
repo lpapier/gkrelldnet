@@ -22,11 +22,12 @@ static Krell    *krell_percent;
 static gint		style_id;
 
 /* config widgets */
-static GtkWidget *entry_log_file,*button_enable;
+static GtkWidget *entry_mon_file,*button_enable,*entry_format_str;
 static gboolean dnet_enable = TRUE;
 
 /* storage for dnet log values */
-static gchar dnet_log_file[256] = "/home/papier/dnet/dnet.log";
+static gchar dnet_mon_file[256] = "/tmp/dnetw.mon";
+static gchar dnet_format_string[128] = "$c: $i/$o";
 static gint wu_in, wu_out, cpu_percent;
 static gchar contest[3] = "???";
 
@@ -42,13 +43,14 @@ static void update_dnet(void)
 	/* init. */
 	wu_in = wu_out = 0;
 	cpu_percent = 0;
+	strcpy(contest,"???");
 
 	/* get file size */
-	if(stat(dnet_log_file,&buf) == -1)
+	if(stat(dnet_mon_file,&buf) == -1)
 		return;
 
 	/* open file for reading */
-	if((fd = fopen(dnet_log_file,"r")) == NULL)
+	if((fd = fopen(dnet_mon_file,"r")) == NULL)
 		return;
 
 	/* seek near the end of file */
@@ -75,9 +77,49 @@ static void update_dnet(void)
 /* update text in gkrellm decals */
 static void update_decals_text(void)
 {
-	gchar text[64];
+	gchar *s,text[64],buf[12];
 
-	sprintf(text,"i: %d, o: %d",wu_in,wu_out);
+	if(contest[0] != '?')
+	{
+		text[0] = '\0';
+		for(s=dnet_format_string; *s!='\0'; s++)
+		{
+			buf[0] = *s;
+			buf[1] = '\0';
+			if(*s == '$' && *(s+1) != '\0')
+			{
+				switch(*(s+1))
+				{
+					case 'i':
+						snprintf(buf,12,"%d",wu_in);
+						s++;
+						break;
+					case 'o':
+						snprintf(buf,12,"%d",wu_out);
+						s++;
+						break;
+					case 'p':
+						snprintf(buf,12,"%d",cpu_percent);
+						s++;
+						break;
+					case 'c':
+						snprintf(buf,12,"%s",contest);
+						g_strdown(buf);
+						s++;
+						break;
+					case 'C':
+						snprintf(buf,12,"%s",contest);
+						g_strup(buf);
+						s++;
+						break;
+				}
+			}
+			strcat(text,buf);
+		}
+	}
+	else
+		strcpy(text,"dnet");
+
 	gkrellm_draw_decal_text(panel,decal_wu,text,-1);
 }
 
@@ -141,7 +183,7 @@ create_plugin(GtkWidget *vbox, gint first_create)
 	krell_percent->full_scale = 100;
 
 	y = -1;
-	decal_wu = gkrellm_create_decal_text(panel,"8", ts, style, -1, -1, -1);
+	decal_wu = gkrellm_create_decal_text(panel,"gd8", ts, style, -1, -1, -1);
 
     gkrellm_configure_panel(panel, NULL, style);
     gkrellm_create_panel(vbox, panel, gkrellm_bg_panel_image(style_id));
@@ -185,17 +227,25 @@ static void create_dnet_tab(GtkWidget *tab)
 	gtk_container_add(GTK_CONTAINER(vbox),button_enable);
 
 	hbox = gtk_hbox_new(FALSE, 0);
-	label = gtk_label_new("Log File");
+	label = gtk_label_new("Format String");
 	gtk_box_pack_start(GTK_BOX(hbox), label, FALSE, FALSE, 4);
-	entry_log_file = gtk_entry_new_with_max_length(255);
-	gtk_entry_set_text(GTK_ENTRY(entry_log_file),dnet_log_file);
-	gtk_box_pack_start(GTK_BOX(hbox), entry_log_file, FALSE, FALSE, 4);
+	entry_format_str = gtk_entry_new_with_max_length(127);
+	gtk_entry_set_text(GTK_ENTRY(entry_format_str),dnet_format_string);
+	gtk_box_pack_start(GTK_BOX(hbox), entry_format_str, FALSE, FALSE, 4);
+
+	gtk_container_add(GTK_CONTAINER(vbox),hbox);
+	hbox = gtk_hbox_new(FALSE, 0);
+	label = gtk_label_new("Monitor File");
+	gtk_box_pack_start(GTK_BOX(hbox), label, FALSE, FALSE, 4);
+	entry_mon_file = gtk_entry_new_with_max_length(255);
+	gtk_entry_set_text(GTK_ENTRY(entry_mon_file),dnet_mon_file);
+	gtk_box_pack_start(GTK_BOX(hbox), entry_mon_file, FALSE, FALSE, 4);
 
 	gtk_container_add(GTK_CONTAINER(vbox),hbox);
 
 	/* about */
 	about_text = g_strdup_printf(
-		"Dnet %d.%d\n" \
+		"GKrellDnet %d.%d\n" \
 		"GKrellM distributed.net Plugin\n\n" \
 		"Copyright (C) 2000 Laurent Papier\n" \
 		"papier@linuxfan.com\n" \
@@ -212,7 +262,8 @@ static void create_dnet_tab(GtkWidget *tab)
 static void save_config(FILE *f)
 {
 	fprintf(f,"%s enable %d\n",CONFIG_KEYWORD,dnet_enable);
-	fprintf(f,"%s logfile %s\n",CONFIG_KEYWORD,dnet_log_file);
+	fprintf(f,"%s logfile %s\n",CONFIG_KEYWORD,dnet_mon_file);
+	fprintf(f,"%s format_string %s\n",CONFIG_KEYWORD,dnet_format_string);
 }
 
 static void load_config(gchar *arg)
@@ -224,7 +275,9 @@ static void load_config(gchar *arg)
 	if(!strcmp("enable",config))
 		sscanf(item,"%d",&dnet_enable);
 	else if(!strcmp("logfile",config))
-		strcpy(dnet_log_file,item);
+		strcpy(dnet_mon_file,item);
+	else if(!strcmp("format_string",config))
+		strcpy(dnet_format_string,item);
 }
 
 static void apply_config(void)
@@ -233,8 +286,10 @@ static void apply_config(void)
 
 	/* update config vars */
 	dnet_enable = GTK_TOGGLE_BUTTON(button_enable)->active;
-	s = gtk_entry_get_text(GTK_ENTRY(entry_log_file));
-	strcpy(dnet_log_file,s);
+	s = gtk_entry_get_text(GTK_ENTRY(entry_mon_file));
+	strcpy(dnet_mon_file,s);
+	s = gtk_entry_get_text(GTK_ENTRY(entry_format_str));
+	strcpy(dnet_format_string,s);
 
 	/* delete old panel */
 	if(panel != NULL)

@@ -1,10 +1,10 @@
-/* $Id: dnetw.h,v 1.12 2004-09-05 20:43:22 papier Exp $ */
+/* $Id: dnetw.h,v 1.13 2004-11-28 10:52:38 papier Exp $ */
 
 #ifndef __DNETW_H__
 #define __DNETW_H__
 
 /* version string */
-#define GKRELLDNET_VERSION "0.14.1"
+#define GKRELLDNET_VERSION "0.14.2"
 
 /* Crunch-o-meter style (default: 2) */
 #define CRUNCH_AUTO    -1

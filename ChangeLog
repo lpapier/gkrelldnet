@@ -1,8 +1,11 @@
 GKrellM plugin ChangeLog
 ------------------------
 
+0.14.2 Sun Nov 28, 2004
+	* none.
+
 0.14.1 Sat Nov 27, 2004
-	* chg: fix opteron compilation. Add '-fPIC' to CFLAGS.
+	* chg: Opteron compilation was fixed. Add '-fPIC' to CFLAGS.
 
 0.14.1 Sun Sep  5, 2004
 	* new: dnetw and gkrellm can run as different user.
@@ -70,6 +73,9 @@ GKrellM plugin ChangeLog
 dnetw ChangeLog
 ---------------
 	
+0.14.2 Sun Nov 28, 2004
+	* fix: shmat flag in dnetw was wrong.
+
 0.14.1 Sun Sep  5, 2004
 	* new: dnetw and gkrellm can run as different user.
 

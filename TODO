@@ -5,5 +5,4 @@ dnetw:
 
 gtkrellm plugin:
 - nicer support for SMP and multi-processor system.
-- scrolling decal if text is larger than gkrellm width.
 

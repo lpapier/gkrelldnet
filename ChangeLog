@@ -1,6 +1,9 @@
 GKrellM plugin ChangeLog
 ------------------------
 
+0.12.1 Mon Jan 13, 2003
+	* fix: problem with RC5-72 and absolute crunch-o-meter style.
+	
 0.12 Sun Jan 05, 2003
 	* new: add a tooltip with the current text.
 	
@@ -54,6 +57,9 @@ GKrellM plugin ChangeLog
 
 dnetw ChangeLog
 ---------------
+
+0.12.1 Mon Jan 13, 2003
+	* fix: problem with RC5-72 and absolute crunch-o-meter style.
 
 0.12 Sun Jan 05, 2003
 	* new: add support for RC5-72 contest.

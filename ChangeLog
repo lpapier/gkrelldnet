@@ -1,12 +1,15 @@
 GKrellM plugin ChangeLog
 ------------------------
 
+0.11 Sun Apr 28, 2002
+	* chg: ported to GkrellM 2.0.
+
 0.10 Sat Apr 27, 2002
 	* chg: the shared memory segment key is no longer fixed.
 	That should prevent problems encountered by some users.
 	
 0.9 Sun Sep 02, 2001
-	* chg: upgrade to GKrellM 1.2.x plugin API.
+	* chg: ported to GKrellM 1.2.x plugin API.
 	* chg: modify mouse button behavior. Middle button stop the dnet client.
 	* new: Right button open plugin config window.
 	* new: configurable Stop Command (Daniel Link request).
@@ -48,6 +51,9 @@ GKrellM plugin ChangeLog
 
 dnetw ChangeLog
 ---------------
+
+0.11 Sun Apr 28, 2002
+	* no change.
 
 0.10 Sat Apr 27, 2002
 	* chg: the shared memory segment key is no longer fixed.

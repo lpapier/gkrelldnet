@@ -12,7 +12,7 @@ Requirements
 * a Linux system with kernel support for Unix 98 (the wrapper will only work
   on Linux system but can be ported to other Unix system).
 * a working Distributed.net client (see http://www.distributed.net/).
-* GKrellM multi-monitor app (1.2.0 or better) (see http://gkrellm.net/).
+* GKrellM multi-monitor app (2.0 or better) (see http://gkrellm.net/).
 
 
 GKrellDnet provides

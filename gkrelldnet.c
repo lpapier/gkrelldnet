@@ -41,21 +41,26 @@ static gint		style_id;
 
 /* config widgets */
 static GtkWidget *entry_mon_file,*button_enable,*entry_format_str;
+static GtkWidget *check_timeout_spin_button;
 
 typedef struct
 {
 	gboolean enable;                     /* enable plugin */
+	gint check_timeout;                  /* sec. between update */
 	gchar file[256];                     /* monitoring file */
-	gchar format_string[128];            /* output format string */
+	gchar format_string[64];             /* output format string */
 	gint wu_in, wu_out, cpu_percent;     /* i/O work units, percent. */
-	gchar contest[3];                    /* current contest */
+	gchar contest[4];                    /* current contest */
+	gchar start_cmd[128];                /* start dnet client */
+	gchar stop_cmd[128];                 /* stop dnet client */
 } DnetMon;
 
 static DnetMon dnetmon = {
-	TRUE,
-	"/tmp/dnetw.mon", "$c: $i/$o",
+	TRUE, 2,
+	"/tmp/dnetw.mon", "$c:$i / $o",
 	0, 0, 0,
-	"???"
+	"???",
+	"dnetw -l /dev/null", "dnetc -quiet -shutdown"
 };
 
 /*  update dnet values */
@@ -157,7 +162,10 @@ static void update_krells(void)
 
 static void update_plugin(void)
 {
-	if(dnetmon.enable && GK.five_second_tick)
+	static gint second_count = 0;
+
+	if(dnetmon.enable && GK.second_tick
+	   && (second_count++ % dnetmon.check_timeout) == 0)
 	{
 		update_dnet();
 		update_decals_text();
@@ -177,6 +185,32 @@ static gint panel_expose_event(GtkWidget *widget, GdkEventExpose *ev)
 	}
 	
 	return FALSE;
+}
+
+static gint cb_button_press(GtkWidget *widget, GdkEventButton *ev)
+{
+	gchar command[128];
+
+	/* button 1 used (left button) */
+	/* pb with dnetc path -> change in dnetw to chdir in dnetc dir
+	if(ev->button == 1)
+	{
+		strcpy(command,dnetmon.start_cmd);
+		strcat(command," ");
+		strcat(command,dnetmon.file);
+	}
+		*/
+		
+	/* button 3 used (right button) */
+	if(ev->button == 3)
+		strcpy(command,dnetmon.stop_cmd);
+
+	/* launch the command */
+	if(ev->button == 3)
+	{
+		strcat(command," &");
+		system(command);
+	}
 }
 
 static void
@@ -212,7 +246,7 @@ create_plugin(GtkWidget *vbox, gint first_create)
 	decal_wu = gkrellm_create_decal_text(panel,"gd8", ts, style, -1, -1, -1);
 
     gkrellm_configure_panel(panel, NULL, style);
-    gkrellm_create_panel(vbox, panel, gkrellm_bg_panel_image(style_id));
+    gkrellm_create_panel(vbox, panel, gkrellm_bg_meter_image(style_id));
     gkrellm_monitor_height_adjust(panel->h);
 
 	/* Draw initial text in decals and krells */
@@ -220,8 +254,13 @@ create_plugin(GtkWidget *vbox, gint first_create)
 	update_krells();
 
 	if (first_create)
+	{
 	    gtk_signal_connect(GTK_OBJECT (panel->drawing_area), "expose_event",
     	        (GtkSignalFunc) panel_expose_event, NULL);
+	    gtk_signal_connect(GTK_OBJECT (panel->drawing_area),
+						   "button_press_event",
+						   (GtkSignalFunc) cb_button_press, NULL);
+	}
 
 	gkrellm_draw_layers(panel);
 }
@@ -238,7 +277,7 @@ static gchar *plugin_info_text[] = {
 	"<b>\tEnable Distributed.net monitor\n",
 	"\tIf you want to disable this plugin (default: enable).\n\n",
 	"<b>\tFormat String\n",
-	"\tThe text output format is controlled by this string (default: $c : $i / $o).\n",
+	"\tThe text output format is controlled by this string (default: $c: $i / $o).\n",
 	"<b>\t\t$i ",
 	"is the input work units\n",
 	"<b>\t\t$o ",
@@ -257,8 +296,8 @@ static void create_dnet_tab(GtkWidget *tab)
 {
 	GtkWidget *tabs, *vbox, *hbox;
 	GtkWidget *label, *frame;
-	GtkWidget *scrolled;
-	GtkWidget *text;
+	GtkWidget *scrolled, *text;
+	GtkAdjustment *adj;
 	gchar *about_text = NULL;
 
 	tabs = gtk_notebook_new();
@@ -284,15 +323,25 @@ static void create_dnet_tab(GtkWidget *tab)
 	entry_format_str = gtk_entry_new_with_max_length(127);
 	gtk_entry_set_text(GTK_ENTRY(entry_format_str),dnetmon.format_string);
 	gtk_box_pack_start(GTK_BOX(hbox), entry_format_str, FALSE, FALSE, 4);
-
 	gtk_container_add(GTK_CONTAINER(vbox),hbox);
+
 	hbox = gtk_hbox_new(FALSE, 0);
 	label = gtk_label_new("Monitor File");
 	gtk_box_pack_start(GTK_BOX(hbox), label, FALSE, FALSE, 4);
 	entry_mon_file = gtk_entry_new_with_max_length(255);
 	gtk_entry_set_text(GTK_ENTRY(entry_mon_file),dnetmon.file);
 	gtk_box_pack_start(GTK_BOX(hbox), entry_mon_file, FALSE, FALSE, 4);
+	gtk_container_add(GTK_CONTAINER(vbox),hbox);
 
+	hbox = gtk_hbox_new(FALSE, 0);
+	adj = (GtkAdjustment *) gtk_adjustment_new(dnetmon.check_timeout,
+												1.0, 30.0, 1.0, 5.0, 0.0);
+	check_timeout_spin_button = gtk_spin_button_new(adj, 0.5, 0);
+	gtk_spin_button_set_numeric(GTK_SPIN_BUTTON(check_timeout_spin_button), TRUE);
+	gtk_box_pack_start(GTK_BOX(hbox), check_timeout_spin_button, FALSE, FALSE, 4);
+	label = gtk_label_new("Seconds between data updates");
+	gtk_label_set_justify(GTK_LABEL(label), GTK_JUSTIFY_LEFT);
+	gtk_box_pack_start(GTK_BOX(hbox), label, FALSE, FALSE, 4);
 	gtk_container_add(GTK_CONTAINER(vbox),hbox);
 
 	/* info */
@@ -313,7 +362,7 @@ static void create_dnet_tab(GtkWidget *tab)
 		"GKrellM distributed.net Plugin\n\n" \
 		"Copyright (C) 2000 Laurent Papier\n" \
 		"papier@linuxfan.com\n" \
-		"http://none.for.now ;-)\n\n" \
+		"http://gkrelldnet.sourceforge.net/\n\n" \
 		"Released under the GNU Public Licence",
 		DNET_MAJOR_VERSION,DNET_MINOR_VERSION);
 	
@@ -326,6 +375,7 @@ static void create_dnet_tab(GtkWidget *tab)
 static void save_config(FILE *f)
 {
 	fprintf(f,"%s enable %d\n",CONFIG_KEYWORD,dnetmon.enable);
+	fprintf(f,"%s check_timeout %d\n",CONFIG_KEYWORD,dnetmon.check_timeout);
 	fprintf(f,"%s logfile %s\n",CONFIG_KEYWORD,dnetmon.file);
 	fprintf(f,"%s format_string %s\n",CONFIG_KEYWORD,dnetmon.format_string);
 }
@@ -338,6 +388,8 @@ static void load_config(gchar *arg)
 
 	if(!strcmp("enable",config))
 		sscanf(item,"%d",&dnetmon.enable);
+	else if(!strcmp("check_timeout",config))
+		sscanf(item,"%d",&dnetmon.check_timeout);
 	else if(!strcmp("logfile",config))
 		strcpy(dnetmon.file,item);
 	else if(!strcmp("format_string",config))
@@ -350,11 +402,12 @@ static void apply_config(void)
 
 	/* update config vars */
 	dnetmon.enable = GTK_TOGGLE_BUTTON(button_enable)->active;
+	dnetmon.check_timeout = gtk_spin_button_get_value_as_int(GTK_SPIN_BUTTON(check_timeout_spin_button));
 	s = gtk_entry_get_text(GTK_ENTRY(entry_mon_file));
 	strcpy(dnetmon.file,s);
 	s = gtk_entry_get_text(GTK_ENTRY(entry_format_str));
 	strcpy(dnetmon.format_string,s);
-
+   
 	/* delete old panel */
 	if(panel != NULL)
 	{
@@ -401,14 +454,6 @@ static Monitor	plugin_mon	=
 Monitor *
 init_plugin()
 {
-	/* If this next call is made, the background and krell images for this
-	|  plugin can be custom themed by putting bg_meter.png or krell.png in the
-	|  subdirectory STYLE_NAME of the theme directory.  Text colors (and
-	|  other things) can also be specified for the plugin with gkrellmrc
-	|  lines like:  StyleMeter  STYLE_NAME.textcolor orange black shadow
-	|  If no custom theming has been done, then all above calls using
-	|  style_id will be equivalent to style_id = DEFAULT_STYLE_ID.
-	*/
 	style_id = gkrellm_add_meter_style(&plugin_mon, STYLE_NAME);
 	return &plugin_mon;
 }

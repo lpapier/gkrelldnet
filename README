@@ -5,26 +5,33 @@ which I release under the GNU General Public License.
 Description
 ===========
 gkrelldnet is a monitoring system for Distributed.net client.
+(see http://gkrelldnet.sourceforge.net/)
 
 Requirements
 ============
-a Linux system (the wrapper will only work on Linux system but can be ported
-to other Unix system).
-a working Distributed.net client (see http://www.distributed.net/).
-GKrellM multi monitor app. (see http://gkrellm.net).
+* a Linux system (the wrapper will only work on Linux system but can be ported
+  to other Unix system).
+* a working Distributed.net client (see http://www.distributed.net/).
+* GKrellM multi-monitor app. (see http://gkrellm.net/).
 
 
-GKrellDnet Features
+GKrellDnet provides
 ===================
 * a distibuted.net client wrapper to make it possible to write monitoring
   applets.
-* a GKrellM plugin. Monitor input/output work units, current contest,
-  percentage done in current block/stub. (see 'Info' in plugin config.).
+* a GKrellM plugin. This plugin features (see also 'Info' in plugin config.)
+    - monitor input/output work units
+    - monitor current contest
+    - percentage done in current block/stub
+    - stop the dnet client on right mouse button click
+    - configurable text output
 
 Limitation
 ==========
-* currently only one cpu supported.
+* currently only one cpu is supported.
 * see TODO file.
+* I'm sorry, but the current version of dnetw only works when started from the
+  dnetc directory. I will remove this limitation as soon as possible. 
 
 
 Installation
@@ -40,7 +47,6 @@ make install
 
 then you need to copy the wrapper 'dnetw' somewhere in your path. I choose to
 copy it in the same directory as the distributed.net client.
-
 
 Usage
 =====
@@ -99,8 +105,6 @@ Misc.
 I have start writing a gkrellm plugin to monitor the dnetw output. But you can
 write your own monitoring applet (WindowMaker Dock, Gnome/KDE applets or
 epplets), I will only work on the wrapper 'dnetw' and the gkrellm plugin.
-
-Sorry, no web site for the moment :(
 
 Both the wrapper and the plugin seems stable.
 If you have problems, first check installation and usage section of this file.

@@ -80,7 +80,7 @@ The new absolute style crunch-o-meter is supported in v0.7, so you can set
 relative or absolute mode in the dnet client config.
 Currently, 'live-rate' is not supported. Wait for the next release.
 
-If you want to redirect the dnet client to a file you must use dnetw
+If you want to redirect the dnet client output to a file you must use dnetw
 option '-l'.
 
 ex: dnetw -l dnet.log /tmp/dnetw.log

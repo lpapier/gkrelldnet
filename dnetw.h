@@ -3,7 +3,7 @@
 #define __DNETW_H__
 
 /* version string */
-#define GKRELLDNET_VERSION "0.8"
+#define GKRELLDNET_VERSION "0.9"
 
 /* Crunch-o-meter style (default: 2) */
 #define CRUNCH_AUTO    -1
@@ -34,6 +34,3 @@ struct dnetc_values {
 #endif
 
 #endif
-
-
-

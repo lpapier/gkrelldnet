@@ -5,7 +5,7 @@ dnetw:
 - support for dnetc options.
 
 gtkrellm plugin:
-- configurable output text (%i, %o, %p).
 - support SMP.
-- left click -> print current contest.
 - add a led for active/inactive state (as in gtkrelmms).
+- left button start/stop dnet client (configurable command line)
+- info page

@@ -44,8 +44,8 @@ static Krell    *krell_percent;
 static gint		style_id;
 
 /* config widgets */
-static GtkWidget *entry_mon_file,*button_enable;
-static GtkWidget *entry_format_str, *entry_start_cmd;
+static GtkWidget *entry_format_str;
+static GtkWidget *entry_stop_cmd, *entry_start_cmd;
 static GtkWidget *entry_pck_done_cmd;
 static GtkWidget *check_timeout_spin_button;
 
@@ -57,9 +57,7 @@ static ulonglong buf_cpu_val[MAX_CPU];
 /* config. and monitored value */
 struct dnetc_monitor
 {
-	gboolean enable;                     /* enable plugin */
 	gint check_timeout;                  /* sec. between update */
-	gchar file[256];                     /* monitoring file */
 	gchar format_string[64];             /* output format string */
 	gchar start_cmd[128];                /* start dnet client cmd */
 	gchar stop_cmd[128];                 /* stop dnet client cmd */
@@ -69,8 +67,7 @@ struct dnetc_monitor
 
 /* default plugin config. */
 static struct dnetc_monitor dnetmon = {
-	TRUE, 2,
-	"/tmp/dnetw.mon", "$c: $i/$o",
+	2, "$c: $i/$o",
 	"dnetw -q", "dnetc -quiet -shutdown",
 	"",
 	NULL
@@ -85,7 +82,7 @@ static void update_dnet2(void)
 	/* if shared memory not attached */
 	if(dnetmon.shmem == NULL)
 	{
-		if((shmid = my_shmget(dnetmon.file,sizeof(struct dnetc_values),0660)) == -1)
+		if((shmid = my_shmget(NULL,sizeof(struct dnetc_values),0660)) == -1)
 			return;
 		
 		if((int) (dnetmon.shmem = shmat(shmid,0,0)) == -1)
@@ -225,34 +222,31 @@ static void update_plugin(void)
 	static gchar text[128] = "dnet";
 	static gchar full_text[256];
 
-	if(dnetmon.enable)
+	if(GK.second_tick && (second_count++ % dnetmon.check_timeout) == 0)
 	{
-		if(GK.second_tick && (second_count++ % dnetmon.check_timeout) == 0)
-		{
-			update_dnet2();
-
-			update_decals_text(text);
-			sprintf(full_text,"%s   ***   %s",text,text);
-			len = gdk_string_width(panel->textstyle->font,text);
-
-			update_krells();
-		}
-
-		if(len > gk_width)
-		{
-			x_scroll = (x_scroll + 1) % (len + separator_len);
-			decal_wu->x_off = gk_width - x_scroll - len;
-			gkrellm_draw_decal_text(panel,decal_wu,full_text,-1);
-		}
-		else
-		{
-			x_scroll = decal_wu->x_off = 0;
-			gkrellm_draw_decal_text(panel,decal_wu,text,-1);
-		}
+		update_dnet2();
+		
+		update_decals_text(text);
+		sprintf(full_text,"%s   ***   %s",text,text);
+		len = gdk_string_width(panel->textstyle->font,text);
 
 		update_krells();
-		gkrellm_draw_panel_layers(panel);
 	}
+
+	if(len > gk_width)
+	{
+		x_scroll = (x_scroll + 1) % (len + separator_len);
+		decal_wu->x_off = gk_width - x_scroll - len;
+		gkrellm_draw_decal_text(panel,decal_wu,full_text,-1);
+	}
+	else
+	{
+		x_scroll = decal_wu->x_off = 0;
+		gkrellm_draw_decal_text(panel,decal_wu,text,-1);
+	}
+
+	update_krells();
+	gkrellm_draw_panel_layers(panel);
 }
 
 static gint panel_expose_event(GtkWidget *widget, GdkEventExpose *ev)
@@ -276,11 +270,7 @@ static gint cb_button_press(GtkWidget *widget, GdkEventButton *ev)
 
 	/* button 1 used (left button) */
 	if(ev->button == 1)
-	{
 		strcpy(command,dnetmon.start_cmd);
-		strcat(command," ");
-		strcat(command,dnetmon.file);
-	}
 	
 	/* button 2 used (middle button) */
 	if(ev->button == 2)
@@ -309,9 +299,6 @@ static void create_plugin(GtkWidget *vbox, gint first_create)
 	gchar text[96] = "dnet";
 
 	gkrellm_vbox = vbox;
-
-	if(!dnetmon.enable)
-		return;
 
 	if (first_create)
 		panel = gkrellm_panel_new0();
@@ -364,14 +351,12 @@ static gchar *plugin_info_text[] = {
 	"\t- start/stop dnet client on mouse button click.\n\n",
 	"<b>Mouse Button Actions:\n\n",
 	"<b>\tLeft ",
-	"click start a new dnet client (default: dnetw -q <monitor file>).\n",
+	"click start a new dnet client (see Start Command).\n",
 	"<b>\tMiddle ",
-	"click stop all dnet client (default: dnetc -quiet -shutdown).\n\n",
+	"click stop all dnet client (see Stop Command).\n",
 	"<b>\tRight ",
 	"open GKrellDnet plugin config window.\n\n",
 	"<b>Configuration:\n\n",
-	"<b>\tEnable Distributed.net monitor\n",
-	"\tIf you want to disable this plugin (default: enable).\n\n",
 	"<b>\tFormat String\n",
 	"\tThe text output format is controlled by this string (default: $c: $i/$o).\n",
 	"<b>\t\t$i ", "is the input work units\n",
@@ -386,11 +371,10 @@ static gchar *plugin_info_text[] = {
 	"<b>\t\t%", " is added in relative mode.\n\n",
 	"<b>\tStart Command\n",
 	"\t\tCommand line used to start the dnet client on left mouse button click\n",
-	"<b>\t\tDo not add the monitor file in the command. ",
-	"The plugin will do it for you.\n\n",
-	"<b>\tMonitor File\n",
-	"\tSet the file used by the Distributed.net client wrapper 'dnetw' to communicate\n",
-	"\twith monitoring applications (default: /tmp/dnetw.log).\n\n",
+	"\t\tdefault: dnetw -q\n\n",
+	"<b>\tStop Command\n",
+	"\t\tCommand line used to stop the dnet client on middle mouse button click\n",
+	"\t\tdefault: dnetc -quiet -shutdown\n\n",
 	"<b>\tPacket Completion Command\n",
 	"\tCommand line executed each time a packet is done (default: none).\n"
 	"\texample: 'esdplay /usr/share/sounds/a_nice_sound_that_I_love.wav'\n"
@@ -418,24 +402,12 @@ static void create_dnet_tab(GtkWidget *tab)
 	vbox = gtk_vbox_new(FALSE,0);
 	gtk_container_add(GTK_CONTAINER(frame),vbox);
 
-	button_enable = gtk_check_button_new_with_label("Enable Distributed.net monitor");  
-	gtk_toggle_button_set_active(GTK_TOGGLE_BUTTON(button_enable),dnetmon.enable);
-	gtk_container_add(GTK_CONTAINER(vbox),button_enable);
-
 	hbox = gtk_hbox_new(FALSE, 0);
 	label = gtk_label_new("Format String");
 	gtk_box_pack_start(GTK_BOX(hbox), label, FALSE, FALSE, 4);
 	entry_format_str = gtk_entry_new_with_max_length(127);
 	gtk_entry_set_text(GTK_ENTRY(entry_format_str),dnetmon.format_string);
 	gtk_box_pack_start(GTK_BOX(hbox), entry_format_str, FALSE, FALSE, 4);
-	gtk_container_add(GTK_CONTAINER(vbox),hbox);
-
-	hbox = gtk_hbox_new(FALSE, 0);
-	label = gtk_label_new("Packet Completion Command");
-	gtk_box_pack_start(GTK_BOX(hbox), label, FALSE, FALSE, 4);
-	entry_pck_done_cmd = gtk_entry_new_with_max_length(127);
-	gtk_entry_set_text(GTK_ENTRY(entry_pck_done_cmd),dnetmon.pck_done_cmd);
-	gtk_box_pack_start(GTK_BOX(hbox), entry_pck_done_cmd, TRUE, TRUE, 4);
 	gtk_container_add(GTK_CONTAINER(vbox),hbox);
 
 	hbox = gtk_hbox_new(FALSE, 0);
@@ -447,11 +419,19 @@ static void create_dnet_tab(GtkWidget *tab)
 	gtk_container_add(GTK_CONTAINER(vbox),hbox);
 
 	hbox = gtk_hbox_new(FALSE, 0);
-	label = gtk_label_new("Monitor File");
+	label = gtk_label_new("Stop Command");
 	gtk_box_pack_start(GTK_BOX(hbox), label, FALSE, FALSE, 4);
-	entry_mon_file = gtk_entry_new_with_max_length(255);
-	gtk_entry_set_text(GTK_ENTRY(entry_mon_file),dnetmon.file);
-	gtk_box_pack_start(GTK_BOX(hbox), entry_mon_file, FALSE, FALSE, 4);
+	entry_stop_cmd = gtk_entry_new_with_max_length(127);
+	gtk_entry_set_text(GTK_ENTRY(entry_stop_cmd),dnetmon.stop_cmd);
+	gtk_box_pack_start(GTK_BOX(hbox), entry_stop_cmd, TRUE, TRUE, 4);
+	gtk_container_add(GTK_CONTAINER(vbox),hbox);
+
+	hbox = gtk_hbox_new(FALSE, 0);
+	label = gtk_label_new("Packet Completion Command");
+	gtk_box_pack_start(GTK_BOX(hbox), label, FALSE, FALSE, 4);
+	entry_pck_done_cmd = gtk_entry_new_with_max_length(127);
+	gtk_entry_set_text(GTK_ENTRY(entry_pck_done_cmd),dnetmon.pck_done_cmd);
+	gtk_box_pack_start(GTK_BOX(hbox), entry_pck_done_cmd, TRUE, TRUE, 4);
 	gtk_container_add(GTK_CONTAINER(vbox),hbox);
 
 	hbox = gtk_hbox_new(FALSE, 0);
@@ -481,7 +461,7 @@ static void create_dnet_tab(GtkWidget *tab)
 	about_text = g_strdup_printf(
 		"GKrellDnet %s\n" \
 		"GKrellM distributed.net Plugin\n\n" \
-		"Copyright (C) 2001 Laurent Papier\n" \
+		"Copyright (C) 2000-2001 Laurent Papier\n" \
 		"papier@tuxfan.net\n" \
 		"http://gkrelldnet.sourceforge.net/\n\n" \
 		"Released under the GNU Public Licence",
@@ -495,11 +475,10 @@ static void create_dnet_tab(GtkWidget *tab)
 
 static void save_config(FILE *f)
 {
-	fprintf(f,"%s enable %d\n",CONFIG_KEYWORD,dnetmon.enable);
 	fprintf(f,"%s check_timeout %d\n",CONFIG_KEYWORD,dnetmon.check_timeout);
-	fprintf(f,"%s logfile %s\n",CONFIG_KEYWORD,dnetmon.file);
 	fprintf(f,"%s format_string %s\n",CONFIG_KEYWORD,dnetmon.format_string);
 	fprintf(f,"%s start_command %s\n",CONFIG_KEYWORD,dnetmon.start_cmd);
+	fprintf(f,"%s stop_command %s\n",CONFIG_KEYWORD,dnetmon.stop_cmd);
 	fprintf(f,"%s packet_completion_cmd %s\n",CONFIG_KEYWORD,dnetmon.pck_done_cmd);
 }
 
@@ -509,16 +488,14 @@ static void load_config(gchar *arg)
 
 	if(sscanf(arg,"%s %[^\n]",config,item) != 2 ) return ; 
 
-	if(!strcmp("enable",config))
-		sscanf(item,"%d",&dnetmon.enable);
-	else if(!strcmp("check_timeout",config))
+	if(!strcmp("check_timeout",config))
 		sscanf(item,"%d",&dnetmon.check_timeout);
-	else if(!strcmp("logfile",config))
-		strcpy(dnetmon.file,item);
 	else if(!strcmp("format_string",config))
 		strcpy(dnetmon.format_string,item);
 	else if(!strcmp("start_command",config))
 		strcpy(dnetmon.start_cmd,item);
+	else if(!strcmp("stop_command",config))
+		strcpy(dnetmon.stop_cmd,item);
 	else if(!strcmp("packet_completion_cmd",config))
 		strcpy(dnetmon.pck_done_cmd,item);
 }
@@ -528,14 +505,13 @@ static void apply_config(void)
 	gchar *s;
 
 	/* update config vars */
-	dnetmon.enable = GTK_TOGGLE_BUTTON(button_enable)->active;
 	dnetmon.check_timeout = gtk_spin_button_get_value_as_int(GTK_SPIN_BUTTON(check_timeout_spin_button));
-	s = gtk_entry_get_text(GTK_ENTRY(entry_mon_file));
-	strcpy(dnetmon.file,s);
 	s = gtk_entry_get_text(GTK_ENTRY(entry_format_str));
 	strcpy(dnetmon.format_string,s);
 	s = gtk_entry_get_text(GTK_ENTRY(entry_start_cmd));
 	strcpy(dnetmon.start_cmd,s);
+	s = gtk_entry_get_text(GTK_ENTRY(entry_stop_cmd));
+	strcpy(dnetmon.stop_cmd,s);
 	s = gtk_entry_get_text(GTK_ENTRY(entry_pck_done_cmd));
 	strcpy(dnetmon.pck_done_cmd,s);
    

@@ -83,16 +83,16 @@ Currently, 'live-rate' is not supported. Wait for the next release.
 If you want to redirect the dnet client output to a file you must use dnetw
 option '-l'.
 
-ex: dnetw -l dnet.log /tmp/dnetw.log
-this command will monitor the dnet client in /tmp/dnetw.log and
-redirect the client output to dnet.log.
+ex: dnetw -l dnet.log
+this command will start and monitor the dnet client and redirect the client
+output to dnet.log.
 
-ex: dnetw /tmp/dnetw.log
-this command will monitor the dnet client in /tmp/dnetw.log file and
-print the client output on your terminal.
+ex: dnetw
+this command will start and monitor the dnet client and print the client
+output on your terminal.
 
 Now, it's possible to give the full dnetc command line to dnetw.
-ex: dnetw -c "dnetc -numcpu 2" -l dnet.log /tmp/dnetw.log
+ex: dnetw -c "dnetc -numcpu 2" -l dnet.log
 this command will force the client to start 2 crunchers.
 NOTE: you must enclose the command line with simple or double quotes. (read
 your shell man page for more info).
@@ -101,8 +101,11 @@ Use '-o' option if you use an old version of the client (v2.8010 and older).
 
 IMPORTANT:
 ----------
-If you start the wrapper by hand: be sure that the file used to monitor the
-client is the same as the one used in the monitoring app (GKrellDnet plugin).
+
+Starting from v0.8, the monitor file is no longer used.
+Starting from v0.9, the dnetw command line is no longer compatible with
+previous version. You need to remove the <monitor file> argument from your
+command line. If you start dnetw from the GKrellDnet plugin no change is need.
 
 
 How does the wrapper work ?

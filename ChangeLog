@@ -1,6 +1,13 @@
 GKrellM plugin ChangeLog
 ------------------------
 
+0.9 Sun Sep 02, 2001
+	* chg: upgrade to GKrellM 1.2.x plugin API.
+	* chg: modify mouse button behavior. Middle button stop the dnet client.
+	* new: Right button open plugin config window.
+	* new: configurable Stop Command (Daniel Link request).
+	* chg: remove monitor file compatibily.
+	
 0.8 Sun Mar 11, 2001
 	* fix: '%' suffix was not added in relative mode.
 	* chg: complete rewrite of the wrapper-plugin communication. It's now
@@ -35,6 +42,12 @@ GKrellM plugin ChangeLog
 
 dnetw ChangeLog
 ---------------
+
+0.9 Sun Sep 02, 2001
+	* chg: remove monitor file compatibily. The wrapper no longer
+	create a monitor file. This was already true in previous release
+	and confuse some users. If you do not start dnetw from the plugin
+	you need to remove the <monitor file> argument from the command line.
 
 0.8 Sun Mar 11, 2001
 	* fix: old mode was broken since version 0.7.

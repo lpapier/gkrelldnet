@@ -15,6 +15,6 @@
 #endif
 
 #define DNET_MAJOR_VERSION 0
-#define DNET_MINOR_VERSION 5
+#define DNET_MINOR_VERSION 6
 
 #endif

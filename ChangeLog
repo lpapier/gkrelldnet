@@ -1,19 +1,23 @@
 GKrellM plugin ChangeLog
 ------------------------
 
+0.6 Sat Nov 04, 2000
+	* fix: little improvements in the pref GUI layout.
+	* new: configurable command to start on every packet completion.
+	
 0.5 Sun Oct 22, 2000
-	* change krell style.
+	* fix: change krell style.
 	
 0.4 Tue Aug 15, 2000
-	* support up to 10 CPU.
-	* configurable start command.
-	* scrolling text if text is larger than gkrellm width.
+	* new: support up to 10 CPU.
+	* new: configurable start command.
+	* new: scrolling text if text is larger than gkrellm width.
 	
 0.3 Sun Jul 30, 2000
-	* left mouse button start the dnet client.
-	* right mouse button stop the dnet client.
-	* add gravity for a better control of the plugin placement.
-	* configurable delay between data updates.
+	* new: left mouse button start the dnet client.
+	* new: right mouse button stop the dnet client.
+	* new: add gravity for a better control of the plugin placement.
+	* new: configurable delay between data updates.
 
 0.2 Fri Jul 28, 2000
 	* First public release.
@@ -22,20 +26,24 @@ GKrellM plugin ChangeLog
 dnetw ChangeLog
 ---------------
 
+0.6 Sat Nov 04, 2000
+	* fix: 100% completion was reported has 104%.
+	* fix: lines about transfert to proxy introduces some wrong value
+	report.
+
 0.5 Sun Oct 22, 2000
-	* bugfix: drop output lines about work unit transfert when logging
-	client output to a file.
+	* fix: lines about transfert to proxy were dropped when logging
+	the wrapper output to a file.
 
 0.4 Sat Aug 05, 2000
-	* support for multi-processors system (not only SMP).
-	* '-c' option to pass the full dnet client command line including
+	* new: support for multi-processors system (not only SMP).
+	* new: '-c' option to pass the full dnet client command line including
 	dnetc options.
-	* bugfix: sometimes the wrapper miss the contest or the I/O buffers
-	info.
+	* fix: sometimes the wrapper miss the contest or the I/O buffers info.
 	
 0.2 Sun Jul 30, 2000
-	* can really be started from any directory.
-	* add a quiet option -q.
+	* fix: can really be started from any directory.
+	* new: add a quiet option -q.
 	
 0.1 Fri Jul 28, 2000
 	* First public release.

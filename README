@@ -31,11 +31,11 @@ GKrellDnet provides
     - percentage done in current block/stub
     - start/stop the dnet client on left/right mouse button click
     - configurable text output
+    - configurable command to start on every packet completion
 
 Limitation
 ==========
-* the plugin support up to 10 CPU but I have no idea for a nice layout. So
-  your ideas are welcome.
+* the plugin only support up to 10 CPU ;-)
 * on multi-proc. system, you will get inaccurate contest report if not all
   crunchers work on the same contest.
 * see TODO file.
@@ -119,9 +119,9 @@ I have start writing a gkrellm plugin to monitor the dnetw output. But you can
 write your own monitoring applet (WindowMaker Dock, Gnome/KDE applets or
 epplets), I will only work on the wrapper 'dnetw' and the gkrellm plugin.
 
-Both the wrapper and the plugin seems stable.
+Both the wrapper and the plugin seem stable.
 If you have problems, first check installation and usage section of this file.
 If you still have problems you can contact me.
 
-Laurent
+Laurent Papier
 papier@linuxfan.com

@@ -299,8 +299,9 @@ static gint cb_button_press(GtkWidget *widget, GdkEventButton *ev)
 
 static void create_plugin(GtkWidget *vbox, gint first_create)
 {
-	GkrellmStyle			*style;
-	GkrellmTextstyle       *ts;
+	GkrellmStyle      *style;
+	GkrellmMargin     *m;
+	GkrellmTextstyle  *ts;
 	GkrellmPiximage   *krell_image;
 	gint y;
 	gchar text[96] = "dnet";
@@ -347,7 +348,8 @@ static void create_plugin(GtkWidget *vbox, gint first_create)
 
 	/* some scroll init. */
 	separator_len = gdk_string_width(panel->textstyle->font,"   ***   ");
-	gk_width = gkrellm_chart_width() - (style->margin.left + style->margin.right) - 2;
+	m = gkrellm_get_style_margins(style);
+	gk_width = gkrellm_chart_width() - (m->left + m->right) - 2;
 }
 
 static gchar *plugin_info_text[] = {

@@ -1,3 +1,5 @@
+/* $Id: dshm.c,v 1.3 2004-07-17 10:29:34 papier Exp $ */
+
 /* a simple tool to dump the dnetw shared memory segment values
 |  Copyright (C) 2000-2003 Laurent Papier
 |

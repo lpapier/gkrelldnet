@@ -37,6 +37,7 @@
 static GtkWidget *gkrellm_vbox;
 
 /* gkrellm elements */
+static Monitor  *monitor;
 static Panel	*panel;
 static Decal    *decal_wu;
 static Krell    *krell_percent;
@@ -212,7 +213,6 @@ static void update_decals_text(gchar *text)
 
 static void update_krells(void)
 {
-	krell_percent->previous = 0;
 	if(dnetmon.shmem != NULL && dnetmon.shmem->cmode == CRUNCH_RELATIVE)
 		gkrellm_update_krell(panel, krell_percent, dnetmon.shmem->val_cpu[0]);
 	else
@@ -251,7 +251,7 @@ static void update_plugin(void)
 		}
 
 		update_krells();
-		gkrellm_draw_layers(panel);
+		gkrellm_draw_panel_layers(panel);
 	}
 }
 
@@ -281,13 +281,17 @@ static gint cb_button_press(GtkWidget *widget, GdkEventButton *ev)
 		strcat(command," ");
 		strcat(command,dnetmon.file);
 	}
-		
-	/* button 3 used (right button) */
-	if(ev->button == 3)
+	
+	/* button 2 used (middle button) */
+	if(ev->button == 2)
 		strcpy(command,dnetmon.stop_cmd);
 
+	/* button 3 used (right button) */
+	if(ev->button == 3)
+		gkrellm_open_config_window(monitor);
+
 	/* launch the command */
-	if(ev->button == 1 || ev->button == 3)
+	if(ev->button == 1 || ev->button == 2)
 	{
 		strcat(command," &");
 		system(command);
@@ -311,11 +315,6 @@ static void create_plugin(GtkWidget *vbox, gint first_create)
 
 	if (first_create)
 		panel = gkrellm_panel_new0();
-	else
-	{
-		gkrellm_destroy_decal_list(panel);
-		gkrellm_destroy_krell_list(panel);
-	}
 
 	style = gkrellm_meter_style(style_id);
 	krell_image = gkrellm_krell_meter_image(style_id);
@@ -323,14 +322,14 @@ static void create_plugin(GtkWidget *vbox, gint first_create)
 	panel->textstyle = ts;
 
     krell_percent = gkrellm_create_krell(panel, krell_image, style);
-	krell_percent->full_scale = 100;
+	gkrellm_monotonic_krell_values(krell_percent, FALSE);
+	gkrellm_set_krell_full_scale(krell_percent, 100, 1);
 
 	y = -1;
 	decal_wu = gkrellm_create_decal_text(panel,"gd8", ts, style, -1, -1, -1);
 
-    gkrellm_configure_panel(panel, NULL, style);
-    gkrellm_create_panel(vbox, panel, gkrellm_bg_meter_image(style_id));
-    gkrellm_monitor_height_adjust(panel->h);
+    gkrellm_panel_configure(panel, NULL, style);
+    gkrellm_panel_create(vbox, monitor, panel);
 
 	/* Draw initial text in decals and krells */
 	update_decals_text(text);
@@ -346,7 +345,7 @@ static void create_plugin(GtkWidget *vbox, gint first_create)
 						   (GtkSignalFunc) cb_button_press, NULL);
 	}
 
-	gkrellm_draw_layers(panel);
+	gkrellm_draw_panel_layers(panel);
 
 	/* some scroll init. */
 	separator_len = gdk_string_width(panel->textstyle->font,"   ***   ");
@@ -366,8 +365,10 @@ static gchar *plugin_info_text[] = {
 	"<b>Mouse Button Actions:\n\n",
 	"<b>\tLeft ",
 	"click start a new dnet client (default: dnetw -q <monitor file>).\n",
-	"<b>\tRight ",
+	"<b>\tMiddle ",
 	"click stop all dnet client (default: dnetc -quiet -shutdown).\n\n",
+	"<b>\tRight ",
+	"open GKrellDnet plugin config window.\n\n",
 	"<b>Configuration:\n\n",
 	"<b>\tEnable Distributed.net monitor\n",
 	"\tIf you want to disable this plugin (default: enable).\n\n",
@@ -465,7 +466,7 @@ static void create_dnet_tab(GtkWidget *tab)
 	gtk_container_add(GTK_CONTAINER(vbox),hbox);
 
 	/* info */
-	vbox = create_tab(tabs,"Info");
+	vbox = gkrellm_create_tab(tabs,"Info");
 	scrolled = gtk_scrolled_window_new(NULL, NULL);
 	gtk_scrolled_window_set_policy(GTK_SCROLLED_WINDOW(scrolled),
 			GTK_POLICY_AUTOMATIC, GTK_POLICY_AUTOMATIC);
@@ -541,11 +542,7 @@ static void apply_config(void)
 	/* delete old panel */
 	if(panel != NULL)
 	{
-		gkrellm_monitor_height_adjust(- panel->h);
-		gkrellm_destroy_decal_list(panel);
-		gkrellm_destroy_krell_list(panel);
-		gkrellm_destroy_panel(panel);
-		g_free(panel);
+		gkrellm_panel_destroy(panel);
 		panel = NULL;
 	}
 	/* create new panel */
@@ -590,5 +587,6 @@ Monitor *init_plugin()
 		buf_cpu_val[i] = 0;
 
 	style_id = gkrellm_add_meter_style(&plugin_mon, STYLE_NAME);
+	monitor = &plugin_mon;
 	return &plugin_mon;
 }

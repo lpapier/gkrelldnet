@@ -251,7 +251,7 @@ int mygets(int fd,char *buf,int count)
 
 static void usage(char *pname)
 {
-	fprintf(stderr,"Distributed.net client wrapper %s\n",GKRELLDNET_VERSION);
+	fprintf(stderr,"Distributed.net client wrapper v%s\n",GKRELLDNET_VERSION);
 	fprintf(stderr,"usage: %s [-q] [-o] [-l<file>] [-c<cmd>]\n",pname);
 	fprintf(stderr," -q: disable all terminal output and run in background\n");
 	fprintf(stderr," -o: old log format (dnetc v2.8010 and lower)\n");

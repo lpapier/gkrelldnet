@@ -1,10 +1,10 @@
-# $Id: Makefile,v 1.12 2004-11-27 16:25:37 papier Exp $
+# $Id: Makefile,v 1.13 2004-11-28 10:52:38 papier Exp $
 
 CC = gcc
 CFLAGS = -Wall -O2 -fPIC -D_GNU_SOURCE
-#CFLAGS = -Wall -g
+#CFLAGS = -Wall -g -D_GNU_SOURCE
 LDFLAGS = -s
-VERSION = 0.14.1
+VERSION = 0.14.2
 
 all: dnetw gkrelldnet.so
 

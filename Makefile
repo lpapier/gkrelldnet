@@ -16,7 +16,7 @@ gkrelldnet.o: gkrelldnet.c
 	$(CC) $(CFLAGS) `pkg-config gtk+-2.0 --cflags` -c gkrelldnet.c
 
 install:
-	cp gkrelldnet.so $(HOME)/.gkrellm/plugins
+	cp gkrelldnet.so $(HOME)/.gkrellm2/plugins
 
 clean:
 	rm -f gkrelldnet.so dnetw *.o

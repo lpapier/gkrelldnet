@@ -5,6 +5,5 @@ dnetw:
 
 gtkrellm plugin:
 - nicer support for SMP and multi-processor system.
-- configurable start command.
 - scrolling decal if text is larger than gkrellm width.
 

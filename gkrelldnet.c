@@ -50,7 +50,9 @@ typedef struct
 	gint check_timeout;                  /* sec. between update */
 	gchar file[256];                     /* monitoring file */
 	gchar format_string[64];             /* output format string */
-	gint wu_in, wu_out, cpu_percent;     /* i/O work units, percent. */
+	gint n_cpu;                          /* num. of active crunchers */
+	gint wu_in, wu_out;                  /* i/O work units */
+	gint *cpu_percent;                   /* cruncher % done */
 	gchar contest[4];                    /* current contest */
 	gchar start_cmd[128];                /* start dnet client */
 	gchar stop_cmd[128];                 /* stop dnet client */
@@ -59,7 +61,9 @@ typedef struct
 static DnetMon dnetmon = {
 	TRUE, 2,
 	"/tmp/dnetw.mon", "$c:$i / $o",
-	0, 0, 0,
+	1,
+	0, 0,
+	NULL,
 	"???",
 	"dnetw -q ", "dnetc -quiet -shutdown"
 };
@@ -69,12 +73,13 @@ static void update_dnet(void)
 {
 	struct stat buf;
 	FILE *fd;
-	gchar tmp[128];
-	gint pos;
+	gchar tmp[128], *t2;
+	gint pos,ncpu,i;
 
 	/* init. */
 	dnetmon.wu_in = dnetmon.wu_out = 0;
-	dnetmon.cpu_percent = 0;
+	for(i=0;i<dnetmon.n_cpu;i++)
+		dnetmon.cpu_percent[i] = 0;
 	strcpy(dnetmon.contest,"???");
 
 	/* get file size */
@@ -100,7 +105,32 @@ static void update_dnet(void)
 	{	
 		/* read lines */
 		while(fgets(tmp,128,fd) != NULL)
-			sscanf(tmp,"%s %d %d %d %d",dnetmon.contest,&dnetmon.wu_in,&dnetmon.wu_out,&pos,&dnetmon.cpu_percent);
+		{
+			sscanf(tmp,"%s %d %d %d",dnetmon.contest,&dnetmon.wu_in,&dnetmon.wu_out,&ncpu);
+			/* more CPU ! */
+			if(ncpu > dnetmon.n_cpu)
+			{
+				/* free old RAM */
+				free(dnetmon.cpu_percent);
+				/* allocate RAM for cpu monitoring */
+				if((dnetmon.cpu_percent = calloc(ncpu,sizeof(gint))) == NULL)
+				{
+					fclose(fd);
+					return;
+				}
+			}
+			/* update numbr of crunchers */
+			dnetmon.n_cpu = ncpu;
+			/* read CPU % */
+			for(i=dnetmon.n_cpu-1;i>=0;i--)
+			{
+				if((t2 = strrchr(tmp,' ')) != NULL)
+				{
+					dnetmon.cpu_percent[i] = strtol(t2,NULL,10);
+					t2[0] = '\0';
+				}
+			}
+		}
 	}
 
 	fclose(fd);
@@ -110,6 +140,7 @@ static void update_dnet(void)
 static void update_decals_text(void)
 {
 	gchar *s,text[64],buf[12];
+	gint t;
 
 	if(dnetmon.contest[0] != '?')
 	{
@@ -131,7 +162,16 @@ static void update_decals_text(void)
 						s++;
 						break;
 					case 'p':
-						snprintf(buf,12,"%d",dnetmon.cpu_percent);
+						t = *(s+2) - '0';
+						/* support up to 10 CPU */
+						if(t >= 0 && t <= 9)
+						{
+							if(t < dnetmon.n_cpu)
+								snprintf(buf,12,"%d",dnetmon.cpu_percent[t]);
+							s++;
+						}
+						else
+							snprintf(buf,12,"%d",dnetmon.cpu_percent[0]);
 						s++;
 						break;
 					case 'c':
@@ -158,7 +198,7 @@ static void update_decals_text(void)
 static void update_krells(void)
 {
 	krell_percent->previous = 0;
-	gkrellm_update_krell(panel, krell_percent, dnetmon.cpu_percent);
+	gkrellm_update_krell(panel, krell_percent, dnetmon.cpu_percent[0]);
 }		
 
 static void update_plugin(void)
@@ -286,10 +326,13 @@ static gchar *plugin_info_text[] = {
 	"is the input work units\n",
 	"<b>\t\t$o ",
 	"is the output work units\n",
-	"<b>\t\t$p ",
-	"is the percentage in current block/stub\n",
 	"<b>\t\t$c/$C ",
-	"is the current contest in lowercase/uppercase\n\n",
+	"is the current contest in lowercase/uppercase\n",
+	"<b>\t\t$p",
+	"<i>n ",
+	"is the percentage in current block/stub for ",
+	"<i>n",
+	"th dnet cruncher ($p <=> $p0)\n\n",
 	"<b>\tMonitor File\n",
 	"\tSet the file used by the Distributed.net client wrapper 'dnetw' to communicate\n",
 	"\twith monitoring applications (default: /tmp/dnetw.log).\n"
@@ -445,7 +488,7 @@ static Monitor	plugin_mon	=
 	NULL,				/* Undefined 1	*/
 	NULL,				/* private	*/
 
-	LOCATION,			/* Insert plugin before this monitor			*/
+	MY_PLACEMENT,			/* Insert plugin before this monitor			*/
 
 	NULL,				/* Handle if a plugin, filled in by GKrellM     */
 	NULL				/* path if a plugin, filled in by GKrellM       */
@@ -458,6 +501,10 @@ static Monitor	plugin_mon	=
 Monitor *
 init_plugin()
 {
+	/* allocate RAM for cpu monitoring */
+	if((dnetmon.cpu_percent = calloc(dnetmon.n_cpu,sizeof(gint))) == NULL)
+		return NULL;
+
 	style_id = gkrellm_add_meter_style(&plugin_mon, STYLE_NAME);
 	return &plugin_mon;
 }

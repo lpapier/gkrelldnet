@@ -560,9 +560,9 @@ static GkrellmMonitor	plugin_mon	=
 };
 
 
-  /* All GKrellM plugins must have one global routine named gkrellm_init_plugin()
-  |  which returns a pointer to a filled in monitor structure.
-  */
+/* All GKrellM plugins must have one global routine named gkrellm_init_plugin()
+|  which returns a pointer to a filled in monitor structure.
+*/
 GkrellmMonitor *gkrellm_init_plugin()
 {
 	int i;

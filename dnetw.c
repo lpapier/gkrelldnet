@@ -186,15 +186,20 @@ int mygets(int fd,char *buf,int count)
 	int i = 0;
 
 	strcpy(buf,tmp);
-	p = strlen(tmp);
-	do
+	p = strlen(buf);
+	t = strchr(buf,'\n');
+
+	if(t == NULL)
 	{
-		s = read(fd,&buf[p],count-p);
-		p += s;
-		buf[p] = '\0';
-		t = strchr(buf,'\n');
+		do
+		{
+			s = read(fd,&buf[p],count-p);
+			p += s;
+			buf[p] = '\0';
+			t = strchr(buf,'\n');
+		}
+		while(s > 0 && t == NULL && buf[0] != 0x0d);
 	}
-	while(s > 0 && t == NULL && buf[0] != 0x0d);
 
 	if(t != NULL)
 	{

@@ -42,6 +42,7 @@ static Panel	*panel;
 static Decal    *decal_wu;
 static Krell    *krell_percent;
 static gint		style_id;
+static gboolean mouse_in;
 
 /* config widgets */
 static GtkWidget *entry_format_str;
@@ -210,7 +211,8 @@ static void update_decals_text(gchar *text)
 
 static void update_krells(void)
 {
-	if(dnetmon.shmem != NULL && dnetmon.shmem->cmode == CRUNCH_RELATIVE)
+	if(dnetmon.shmem != NULL && dnetmon.shmem->cmode == CRUNCH_RELATIVE
+		&& !mouse_in)
 		gkrellm_update_krell(panel, krell_percent, dnetmon.shmem->val_cpu[0]);
 	else
 		gkrellm_update_krell(panel, krell_percent, 0);
@@ -262,6 +264,18 @@ static gint panel_expose_event(GtkWidget *widget, GdkEventExpose *ev)
 	}
 	
 	return FALSE;
+}
+
+static gint cb_panel_enter(GtkWidget *w, GdkEventButton *ev)
+{
+	mouse_in = TRUE;
+	return TRUE;
+}
+
+static gint cb_panel_leave(GtkWidget *w, GdkEventButton *ev)
+{
+	mouse_in = FALSE;
+	return TRUE;
 }
 
 static gint cb_button_press(GtkWidget *widget, GdkEventButton *ev)
@@ -330,6 +344,10 @@ static void create_plugin(GtkWidget *vbox, gint first_create)
 	    gtk_signal_connect(GTK_OBJECT (panel->drawing_area),
 						   "button_press_event",
 						   (GtkSignalFunc) cb_button_press, NULL);
+		gtk_signal_connect(GTK_OBJECT(panel->drawing_area),
+				"enter_notify_event", (GtkSignalFunc) cb_panel_enter, NULL);
+		gtk_signal_connect(GTK_OBJECT(panel->drawing_area),
+				"leave_notify_event", (GtkSignalFunc) cb_panel_leave, NULL);
 	}
 
 	gkrellm_draw_panel_layers(panel);

@@ -7,6 +7,8 @@ GKrellM plugin ChangeLog
 	* new: Right button open plugin config window.
 	* new: configurable Stop Command (Daniel Link request).
 	* chg: remove monitor file compatibily.
+	* new: move the krell to the left when mouse is over the panel
+	(like GKrellM builtin memory panel).
 	
 0.8 Sun Mar 11, 2001
 	* fix: '%' suffix was not added in relative mode.

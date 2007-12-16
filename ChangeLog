@@ -1,6 +1,9 @@
 GKrellM plugin ChangeLog
 ------------------------
 
+0.14.3 Sun Dec  9, 2007
+	* none.
+
 0.14.2 Sun Nov 28, 2004
 	* none.
 
@@ -73,6 +76,9 @@ GKrellM plugin ChangeLog
 dnetw ChangeLog
 ---------------
 	
+0.14.3 Sun Dec  9, 2007
+	* chg: support the lastest output format.
+
 0.14.2 Sun Nov 28, 2004
 	* fix: shmat flag in dnetw was wrong.
 

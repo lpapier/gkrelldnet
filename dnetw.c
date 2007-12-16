@@ -1,4 +1,4 @@
-/* $Id: dnetw.c,v 1.25 2004-11-28 10:52:38 papier Exp $ */
+/* $Id: dnetw.c,v 1.26 2007-12-16 09:47:46 papier Exp $ */
 
 /* dnetw: a distributed.net client wrapper
 |  Copyright (C) 2000-2003 Laurent Papier
@@ -28,6 +28,7 @@
 #include <sys/ipc.h>
 #include <sys/shm.h>
 
+#include <ctype.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <unistd.h>
@@ -283,6 +284,7 @@ int main(int argc,char *argv[])
 	char *tmp;
 	char buf[BUF_SIZE];
 	int ttylog,lu,i,q;
+	struct winsize ws;
 
 	regmatch_t pmatch[2];
 
@@ -377,9 +379,9 @@ int main(int argc,char *argv[])
 	{
 		if(regcomp(&preg_in,"[0-9]+.packets?.+remains?.in",REG_EXTENDED) != 0)
 			clean_and_exit(NULL,1);
-		if(regcomp(&preg_out,"[0-9]+.packets?(.+in.buff-out|.\\(.+stats?.units?\\).are.in)",REG_EXTENDED) != 0)
+		if(regcomp(&preg_out,"[0-9]+.packets?(.+in.buff-out|.\\(.+stats?.units?\\).(are|is).in)",REG_EXTENDED) != 0)
 			clean_and_exit(NULL,1);
-		if(regcomp(&preg_contest,"[A-Z0-9-]{3,6}:.Loaded",REG_EXTENDED) != 0)
+		if(regcomp(&preg_contest,"[A-Z0-9-]{3,6}(.#[a-z])?:.Loaded",REG_EXTENDED) != 0)
 			clean_and_exit(NULL,1);
 		if(regcomp(&preg_proxy,"((Retrieved|Sent).+(stat..unit|packet)|Attempting.to.resolve|Connect(ing|ed).to)",REG_EXTENDED) !=0)
 			clean_and_exit(NULL,1);
@@ -387,14 +389,16 @@ int main(int argc,char *argv[])
 		contest_offset = 0;
 	}
 
-	if(regcomp(&preg_absolute,"#[0-9]+: [A-Z0-9-]{3,6}:.+\\[[,0-9]+\\]",REG_EXTENDED) != 0)
+	if(regcomp(&preg_absolute,"(#[0-9]+: [A-Z0-9-]{3,6}|[A-Z0-9-]{3,6}(.#[a-z])?):.+\\[[,0-9]+\\]",REG_EXTENDED) != 0)
 		clean_and_exit(NULL,1);
 	if(regcomp(&preg_cruncher,"[0-9]+.cruncher.*started",REG_EXTENDED) != 0)
 		clean_and_exit(NULL,1);
 	regex_flag = 1;
 
 	/* obtain a pseudo-terminal */
-	if((openpty(&fd,&tty_fd,NULL,NULL,NULL)) == -1)
+	ws.ws_col = 132; ws.ws_row = 10;
+	ws.ws_xpixel = ws.ws_ypixel = 0;
+	if((openpty(&fd,&tty_fd,NULL,NULL,&ws)) == -1)
 		clean_and_exit("openpty",1);
 
 	/* start dnet client and start reading tty */
@@ -449,9 +453,18 @@ int main(int argc,char *argv[])
 					/* set crunch-o-meter mode */
 					shmem->cmode = CRUNCH_ABSOLUTE;
 					/* read CPU num */
-					i = strtol(&buf[pmatch[0].rm_so+1],(char **) NULL,10) - 1;
-					/* avoid core dump */
-					i %= MAX_CPU;
+					tmp = strchr(&buf[pmatch[0].rm_so],'#');
+					if(tmp != NULL)
+					{
+						if(isdigit(tmp[1]))
+							i = strtol(&buf[pmatch[0].rm_so+1],(char **) NULL,10) - 1;
+						else if(islower(tmp[1]))
+							i = tmp[1] - 'a';
+						/* avoid core dump */
+						i %= MAX_CPU;
+					}
+					else
+						i = 0;
 					/* read k(keys|nodes) */
 					shmem->val_cpu[i] = extract_val(&buf[pmatch[0].rm_so]);
 					
@@ -512,6 +525,9 @@ int main(int argc,char *argv[])
 					clean_and_exit(NULL,1);
 				}
 			}
+
+			if(dflag)
+				fprintf(stderr,"contest = %s, in = %d, out = %d, n_cpu = %d\n",shmem->contest, shmem->wu_in, shmem->wu_out, shmem->n_cpu);
 
 			if(!qflag)
 			{

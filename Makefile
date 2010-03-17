@@ -4,7 +4,7 @@ CC = gcc
 CFLAGS = -Wall -O2 -fPIC -D_GNU_SOURCE
 #CFLAGS = -Wall -g -D_GNU_SOURCE
 LDFLAGS = -s
-VERSION = 0.14.2
+VERSION = 0.14.3
 
 all: dnetw gkrelldnet.so
 

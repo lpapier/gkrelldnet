@@ -1,4 +1,4 @@
-/* $Id: dnetw.h,v 1.14 2007-12-16 09:47:46 papier Exp $ */
+/* $Id$ */
 
 #ifndef __DNETW_H__
 #define __DNETW_H__

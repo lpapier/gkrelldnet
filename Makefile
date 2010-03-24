@@ -1,9 +1,9 @@
-# $Id: Makefile,v 1.13 2004-11-28 10:52:38 papier Exp $
+# $Id$
 
 CC = gcc
 CFLAGS = -Wall -O2 -fPIC -D_GNU_SOURCE
-#CFLAGS = -Wall -g -D_GNU_SOURCE
-LDFLAGS = -s
+CFLAGS = -Wall -g -D_GNU_SOURCE
+#LDFLAGS = -s
 VERSION = 0.14.3
 
 all: dnetw gkrelldnet.so
@@ -17,6 +17,9 @@ dnetw: dnetw.o shmem.o
 dshm: dshm.o shmem.o
 	$(CC) $(LDFLAGS) -o $@ $^
 
+dnetweb: dnetweb.o shmem.o
+	$(CC) $(LDFLAGS) -o $@ $^ -lmicrohttpd
+
 gkrelldnet.o: gkrelldnet.c
 	$(CC) $(CFLAGS) `pkg-config gtk+-2.0 --cflags` -c $<
 
@@ -25,7 +28,7 @@ install:
 	@echo "Please read README file for info about dnetw wrapper installation."
 
 clean:
-	rm -f gkrelldnet.so dnetw dshm *.o
+	rm -f gkrelldnet.so dnetw dshm dnetweb *.o
 
 tar:
 	make clean

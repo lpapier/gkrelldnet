@@ -1,4 +1,4 @@
-/* $Id: dnetw.c,v 1.26 2007-12-16 09:47:46 papier Exp $ */
+/* $Id$ */
 
 /* dnetw: a distributed.net client wrapper
 |  Copyright (C) 2000-2003 Laurent Papier

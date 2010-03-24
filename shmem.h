@@ -1,4 +1,4 @@
-/* $Id: shmem.h,v 1.4 2004-11-27 16:25:37 papier Exp $ */
+/* $Id$ */
 
 
 #ifndef __SHMEM_H__

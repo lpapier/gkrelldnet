@@ -1,4 +1,4 @@
-/* $Id: gkrelldnet.c,v 1.29 2004-11-27 16:25:37 papier Exp $ */
+/* $Id$ */
 
 /* GKrelldnet: a GKrellM plugin to monitor Distributed.net client
 |  Copyright (C) 2000-2003 Laurent Papier

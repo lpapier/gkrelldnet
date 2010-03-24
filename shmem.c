@@ -1,4 +1,4 @@
-/* $Id: shmem.c,v 1.7 2004-09-05 20:43:22 papier Exp $ */
+/* $Id$ */
 
 /*
 |  Copyright (C) 2000-2003 Laurent Papier

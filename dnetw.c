@@ -27,6 +27,7 @@
 #include <regex.h>
 #include <sys/ipc.h>
 #include <sys/shm.h>
+#include <getopt.h>    /* for getopt_long */
 
 #include <ctype.h>
 #include <stdio.h>
@@ -264,10 +265,13 @@ int mygets(int fd,char *buf,int count)
 static void usage(char *pname)
 {
 	fprintf(stderr,"Distributed.net client wrapper v%s\n",GKRELLDNET_VERSION);
-	fprintf(stderr,"usage: %s [-q] [-o] [-l<file>] [-c<cmd>]\n",pname);
-	fprintf(stderr," -q: disable all terminal output and run in background\n");
-	fprintf(stderr," -l<log_file>: redirect the client output to <file>\n");
-	fprintf(stderr," -c<cmd>: use <cmd> to start the dnetc client (default: 'dnetc')\n");
+	printf("Usage: %s [OPTION]...\n",pname);
+	printf("Options:\n");
+	printf("   -h, --help                 print this help.\n");
+	printf("   -V, --version              print version.\n");
+	printf("   -q, --quiet                disable all terminal output and run in background.\n");
+	printf("   -l, --log=<file>           redirect the client output to <file>.\n");
+	printf("   -c, --command=<cmd>        use <cmd> to start the dnetc client (default: 'dnetc').\n");
 	clean_and_exit(NULL,0);
 }
 
@@ -276,6 +280,16 @@ int main(int argc,char *argv[])
 	extern char *optarg;
 	extern int optind;
 	int ch;
+
+	struct option long_options[] = {
+		{"help", no_argument, 0, 'h'},
+		{"version", no_argument, 0, 'V'},
+		{"debug", no_argument, 0, 'd'},
+		{"quiet", no_argument, 0, 'q'},
+		{"log", required_argument, 0, 'l'},
+		{"command", required_argument, 0, 'c'},
+		{0, 0, 0, 0}
+	};
 
 	int contest_offset;
 
@@ -292,12 +306,16 @@ int main(int argc,char *argv[])
 	int log_fd;
 
 	/* check arguments */
-	while ((ch = getopt(argc, argv, "hdql:c:")) != -1)
+	while ((ch = getopt_long (argc, argv, "hdVql:c:", long_options, NULL)) != -1)
 	{
 		switch(ch)
 		{
 			case 'd':
 				dflag = 1;
+				break;
+			case 'V':
+				printf("%s\n",GKRELLDNET_VERSION);
+				exit(0);
 				break;
 			case 'q':
 				qflag = 1;
@@ -308,6 +326,7 @@ int main(int argc,char *argv[])
 			case 'l':
 				strcpy(logfile,optarg);
 				break;
+			case 'h':
 			default:
 				usage(argv[0]);
 		}

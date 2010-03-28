@@ -266,7 +266,6 @@ static void usage(char *pname)
 	fprintf(stderr,"Distributed.net client wrapper v%s\n",GKRELLDNET_VERSION);
 	fprintf(stderr,"usage: %s [-q] [-o] [-l<file>] [-c<cmd>]\n",pname);
 	fprintf(stderr," -q: disable all terminal output and run in background\n");
-	fprintf(stderr," -o: old log format (dnetc v2.8010 and lower)\n");
 	fprintf(stderr," -l<log_file>: redirect the client output to <file>\n");
 	fprintf(stderr," -c<cmd>: use <cmd> to start the dnetc client (default: 'dnetc')\n");
 	clean_and_exit(NULL,0);
@@ -278,7 +277,6 @@ int main(int argc,char *argv[])
 	extern int optind;
 	int ch;
 
-	int oflag = 0;
 	int contest_offset;
 
 	char *tmp;
@@ -294,15 +292,12 @@ int main(int argc,char *argv[])
 	int log_fd;
 
 	/* check arguments */
-	while ((ch = getopt(argc, argv, "hdoql:c:")) != -1)
+	while ((ch = getopt(argc, argv, "hdql:c:")) != -1)
 	{
 		switch(ch)
 		{
 			case 'd':
 				dflag = 1;
-				break;
-			case 'o':
-				oflag = 1;
 				break;
 			case 'q':
 				qflag = 1;
@@ -359,35 +354,16 @@ int main(int argc,char *argv[])
 		shmem->val_cpu[i] = 0;
 	
 	/* precompile regex */
-	if(oflag)
-	{
-		if(regcomp(&preg_in,"[0-9]+.work.unit.*buff-in",REG_EXTENDED) != 0)
-			clean_and_exit(NULL,1);
-		if(regcomp(&preg_out,"[0-9]+.work.unit.*buff-out",REG_EXTENDED) != 0)
-			clean_and_exit(NULL,1);
-		if(regcomp(&preg_contest,"Loaded.[A-Z0-9]{3}.",REG_EXTENDED) != 0)
-			clean_and_exit(NULL,1);
-		if(regcomp(&preg_proxy,"(Retrieved|Sent).+(work.unit|packet)",REG_EXTENDED) !=0)
-			clean_and_exit(NULL,1);
+	if(regcomp(&preg_in,"[0-9]+.packets?.+remains?.in",REG_EXTENDED) != 0)
+		clean_and_exit(NULL,1);
+	if(regcomp(&preg_out,"[0-9]+.packets?(.+in.buff-out|.\\(.+stats?.units?\\).(are|is).in)",REG_EXTENDED) != 0)
+		clean_and_exit(NULL,1);
+	if(regcomp(&preg_contest,"[A-Z0-9-]{3,6}(.#[a-z])?:.Loaded",REG_EXTENDED) != 0)
+		clean_and_exit(NULL,1);
+	if(regcomp(&preg_proxy,"((Retrieved|Sent).+(stat..unit|packet)|Attempting.to.resolve|Connect(ing|ed).to)",REG_EXTENDED) !=0)
+		clean_and_exit(NULL,1);
 
-		contest_offset = 7;
-
-		/* force relative crunch-o-meter style */
-		shmem->cmode = CRUNCH_RELATIVE;
-	}
-	else
-	{
-		if(regcomp(&preg_in,"[0-9]+.packets?.+remains?.in",REG_EXTENDED) != 0)
-			clean_and_exit(NULL,1);
-		if(regcomp(&preg_out,"[0-9]+.packets?(.+in.buff-out|.\\(.+stats?.units?\\).(are|is).in)",REG_EXTENDED) != 0)
-			clean_and_exit(NULL,1);
-		if(regcomp(&preg_contest,"[A-Z0-9-]{3,6}(.#[a-z])?:.Loaded",REG_EXTENDED) != 0)
-			clean_and_exit(NULL,1);
-		if(regcomp(&preg_proxy,"((Retrieved|Sent).+(stat..unit|packet)|Attempting.to.resolve|Connect(ing|ed).to)",REG_EXTENDED) !=0)
-			clean_and_exit(NULL,1);
-
-		contest_offset = 0;
-	}
+	contest_offset = 0;
 
 	if(regcomp(&preg_absolute,"(#[0-9]+: [A-Z0-9-]{3,6}|[A-Z0-9-]{3,6}(.#[a-z])?):.+\\[[,0-9]+\\]",REG_EXTENDED) != 0)
 		clean_and_exit(NULL,1);

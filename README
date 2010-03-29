@@ -1,5 +1,5 @@
 
-Copyright (c) 2000-2004 by Laurent Papier.  This program is free software
+Copyright (c) 2000-2010 by Laurent Papier.  This program is free software
 which I release under the GNU General Public License.
 
 Description
@@ -13,15 +13,18 @@ Requirements
   on Linux system but can be ported to other Unix system).
 * a working Distributed.net client (see http://www.distributed.net/).
 * GKrellM multi-monitor app (2.0 or better) (see http://gkrellm.net/).
+* libmicrohttpd (optional) for the dnetw builtin web server.
 
 
 GKrellDnet provides
 ===================
-* a distibuted.net client wrapper to make possible to write monitoring applets.
-  It's possible to monitor the client activity without a wrapper but to
+* a distibuted.net client wrapper that make possible to write monitoring applets.
+  It's possible to monitor the client activity without a wrapper but not to
   monitor the crunch-o-meter. This is because the client doesn't print the
   crunch'o'meter if the client output is not a tty.
   This is why I have written this wrapper.
+  The wrapper now has a builtin web server (version 0.15). This make it easier to read
+  current crunch-o-meter value from other apps.
 
 * a GKrellM plugin.
   This plugin features (see also 'Info' in plugin config.)
@@ -72,6 +75,29 @@ Now, you must use the wrapper to start the dnet client or you can left click in
 the GKrellM plugin (be sure that the 'dnetc' executable is in the PATH of
 gkrellm, see install section).
 
+Since version 0.15, dnetw includes a builtin web server. You can active it with '--port|-p'
+option. dnetw will then listen on port passed as argument. You can provide a format string
+parameter to the web server via the 'f' cgi parameter.
+IMPORTANT: the web server only listen on localhost IP for security reason.
+
+Example:
+starting the wrapper with the builtin web server listening on port 1234.
+dnetw -q -p 1234
+
+reading current values (default output)
+curl http://localhost:1234/
+ogr:1:3:351.54Gn:85.06Gn
+
+reading current values (custom output)
+curl 'http://localhost:1234/?f=$c:%20$i/$o%20-%20$p0/$p1'
+ogr: 1/3 - 351.76Gn/85.30Gn
+
+possible formating are:
+  $i is the input work units
+  $o is the output work units
+  $c/$C is the current contest in lowercase/uppercase
+  $pn is the progress indicator value in current block/stub on CPU #n ($p <=> $p0)
+
 VERY IMPORTANT:
 ---------------
 dnetw only works if you DO NOT redirect the client output to a file.
@@ -97,8 +123,6 @@ this command will force the client to start 2 crunchers.
 NOTE: you must enclose the command line with simple or double quotes. (read
 your shell man page for more info).
 
-Use '-o' option if you use an old version of the client (v2.8010 and older).
-
 IMPORTANT:
 ----------
 
@@ -114,7 +138,7 @@ I have start writing a gkrellm plugin to monitor the dnetw output. But you can
 write your own monitoring applet (WindowMaker Dock, Gnome/KDE applets or
 epplets), I will only work on the wrapper 'dnetw' and the gkrellm plugin.
 
-Both the wrapper and the plugin seem stable on my system (RedHat 7.2).
+Both the wrapper and the plugin seem stable on my system (Fedora Core 12).
 If you have problems, first check installation and usage section of this file.
 If you still have problems you can contact me.
 

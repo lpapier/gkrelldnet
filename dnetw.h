@@ -4,7 +4,7 @@
 #define __DNETW_H__
 
 /* version string */
-#define GKRELLDNET_VERSION "0.14.3"
+#define GKRELLDNET_VERSION "0.15"
 
 /* Crunch-o-meter style (default: 2) */
 #define CRUNCH_AUTO    -1

@@ -1,7 +1,7 @@
 /* $Id$ */
 
 /* a simple tool to dump the dnetw shared memory segment values
-|  Copyright (C) 2000-2003 Laurent Papier
+|  Copyright (C) 2000-2010 Laurent Papier
 |
 |  Author:  Laurent Papier <papier@tuxfan.net>
 |

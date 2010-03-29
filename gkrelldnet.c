@@ -1,7 +1,7 @@
 /* $Id$ */
 
 /* GKrelldnet: a GKrellM plugin to monitor Distributed.net client
-|  Copyright (C) 2000-2003 Laurent Papier
+|  Copyright (C) 2000-2010 Laurent Papier
 |
 |  Author:  Laurent Papier <papier@tuxfan.net>
 |
@@ -29,6 +29,7 @@
 #include <sys/shm.h>
 
 #include "shmem.h"
+#include "dprint.h"
 #include "gkrelldnet.h"
 
 
@@ -164,93 +165,6 @@ static void update_dnet2(void)
 	}
 }
 
-/* format cpu val with suffix depending on crunch-o-meter mode */
-void sprint_cpu_val(char *buf,int max,guint64 val)
-{
-	gfloat tmp;
-
-	/* add suffix depending on crunch-o-meter mode */
-	switch(dnetmon.shmem->cmode)
-	{
-		case CRUNCH_RELATIVE:
-			snprintf(buf,max,"%llu%%",val);
-			break;
-		case CRUNCH_ABSOLUTE:
-			if(!strcmp(dnetmon.shmem->contest,"OGR"))
-			{
-				/* do auto-scale */
-				tmp = (float) (val / 1000000ULL);
-				snprintf(buf,max,"%.2f Gn",tmp/1000);
-			}
-			if(!strcmp(dnetmon.shmem->contest,"RC5"))
-			{
-				/* do auto-scale */
-				tmp = (float) (val / 1000ULL);
-				snprintf(buf,max,"%.2f Mk",tmp/1000);
-			}
-			
-			break;
-	}
-}
-
-
-/* update text in gkrellm decals */
-static void update_decals_text(gchar *text)
-{
-	gchar *s,buf[24];
-	gint t;
-
-	if(dnetmon.shmem != NULL && dnetmon.shmem->contest[0] != '?')
-	{
-		text[0] = '\0';
-		for(s=dnetmon.format_string; *s!='\0'; s++)
-		{
-			buf[0] = *s;
-			buf[1] = '\0';
-			if(*s == '$' && *(s+1) != '\0')
-			{
-				switch(*(s+1))
-				{
-					case 'i':
-						snprintf(buf,12,"%d",dnetmon.shmem->wu_in);
-						s++;
-						break;
-					case 'o':
-						snprintf(buf,12,"%d",dnetmon.shmem->wu_out);
-						s++;
-						break;
-					case 'p':
-						t = *(s+2) - '0';
-						/* support up to 10 CPU */
-						if(t >= 0 && t <= 9)
-						{
-							if(t < dnetmon.shmem->n_cpu)
-								sprint_cpu_val(buf,24,dnetmon.shmem->val_cpu[t]);
-							s++;
-						}
-						else
-							sprint_cpu_val(buf,24,dnetmon.shmem->val_cpu[0]);
-						s++;
-						break;
-					case 'c':
-						snprintf(buf,12,"%s",dnetmon.shmem->contest);
-						g_strdown(buf);
-						s++;
-						break;
-					case 'C':
-						snprintf(buf,12,"%s",dnetmon.shmem->contest);
-						g_strup(buf);
-						s++;
-						break;
-				}
-			}
-			strcat(text,buf);
-		}
-	}
-	else
-		snprintf(text,127,"dnet");
-}
-
 static void update_krells(void)
 {
 	int i;
@@ -273,7 +187,7 @@ static void update_plugin(void)
 	{
 		update_dnet2();
 		
-		update_decals_text(text);
+		sprint_formated_data(text,128,dnetmon.format_string,dnetmon.shmem);
 		sprintf(full_text,"%s   ***   %s",text,text);
 		len = gkrellm_gdk_string_width(panel->textstyle->font,text);
 
@@ -377,7 +291,7 @@ static void create_plugin(GtkWidget *vbox, gint first_create)
     gkrellm_panel_create(vbox, monitor, panel);
 
 	/* Draw initial text in decals and krells */
-	update_decals_text(text);
+	sprint_formated_data(text,96,dnetmon.format_string,dnetmon.shmem);
 	gkrellm_draw_decal_text(panel,decal_wu,text,-1);
 	update_krells();
 
@@ -526,7 +440,7 @@ static void create_dnet_tab(GtkWidget *tab)
 	about_text = g_strdup_printf(
 		"GKrellDnet %s\n" \
 		"GKrellM distributed.net Plugin\n\n" \
-		"Copyright (C) 2000-2004 Laurent Papier\n" \
+		"Copyright (C) 2000-2010 Laurent Papier\n" \
 		"papier@tuxfan.net\n" \
 		"http://gkrelldnet.sourceforge.net/\n\n" \
 		"Released under the GNU Public Licence",

@@ -1,6 +1,9 @@
 GKrellM plugin ChangeLog
 ------------------------
 
+0.15 Mon Mar 29, 2010
+    * chg: factorize output formating code
+
 0.14.3 Sun Dec  9, 2007
 	* none.
 
@@ -76,6 +79,11 @@ GKrellM plugin ChangeLog
 dnetw ChangeLog
 ---------------
 	
+0.15 Mon Mar 29, 2010
+    * new: make current stats avaible via a builtin web server.
+	* chg: remove support of old version of the client (v2.8010 and older).
+	* chg: use getopt_long for smarter command line options.
+
 0.14.3 Sun Dec  9, 2007
 	* chg: support the lastest output format.
 

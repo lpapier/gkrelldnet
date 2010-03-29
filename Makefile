@@ -3,7 +3,7 @@
 CC = gcc
 CFLAGS = -Wall -O2 -fPIC -D_GNU_SOURCE -DHAVE_LIBMICROHTTPD
 #CFLAGS = -Wall -g -D_GNU_SOURCE -DHAVE_LIBMICROHTTPD
-LDFLAGS = -s
+#LDFLAGS = -s
 VERSION = 0.15
 
 all: dnetw gkrelldnet.so

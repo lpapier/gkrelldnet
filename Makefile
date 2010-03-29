@@ -1,18 +1,18 @@
 # $Id$
 
 CC = gcc
-CFLAGS = -Wall -O2 -fPIC -D_GNU_SOURCE
-CFLAGS = -Wall -g -D_GNU_SOURCE
-#LDFLAGS = -s
-VERSION = 0.14.3
+CFLAGS = -Wall -O2 -fPIC -D_GNU_SOURCE -DHAVE_LIBMICROHTTPD
+#CFLAGS = -Wall -g -D_GNU_SOURCE -DHAVE_LIBMICROHTTPD
+LDFLAGS = -s
+VERSION = 0.15
 
 all: dnetw gkrelldnet.so
 
-gkrelldnet.so: gkrelldnet.o shmem.o
+gkrelldnet.so: gkrelldnet.o shmem.o dprint.o
 	$(CC) $(LDFLAGS) -shared -Wl -o $@ $^
 
-dnetw: dnetw.o shmem.o
-	$(CC) $(LDFLAGS) -o $@ $^ -lutil
+dnetw: dnetw.o shmem.o dprint.o
+	$(CC) $(LDFLAGS) -o $@ $^ -lmicrohttpd -lutil
 
 dshm: dshm.o shmem.o
 	$(CC) $(LDFLAGS) -o $@ $^
@@ -33,5 +33,5 @@ clean:
 tar:
 	make clean
 	(cd ..; tar cvfz gkrelldnet-$(VERSION).tar.gz \
-		--exclude './gkrelldnet/CVS' \
+		--exclude './gkrelldnet/.svn' \
 		--exclude='./gkrelldnet/*.tar.gz' ./gkrelldnet)

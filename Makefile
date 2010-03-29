@@ -1,9 +1,15 @@
 # $Id$
 
 CC = gcc
-CFLAGS = -Wall -O2 -fPIC -D_GNU_SOURCE -DHAVE_LIBMICROHTTPD
-#CFLAGS = -Wall -g -D_GNU_SOURCE -DHAVE_LIBMICROHTTPD
+CFLAGS = -Wall -O2 -fPIC -D_GNU_SOURCE
 LDFLAGS = -s
+
+#CFLAGS = -Wall -g -D_GNU_SOURCE -DHAVE_LIBMICROHTTPD
+
+## uncomment the following lines to use libmicrohttpd 98912660
+#CFLAGS = -Wall -O2 -fPIC -D_GNU_SOURCE -DHAVE_LIBMICROHTTPD
+#LIBS = -lmicrohttpd
+
 VERSION = 0.15
 
 all: dnetw gkrelldnet.so
@@ -12,7 +18,7 @@ gkrelldnet.so: gkrelldnet.o shmem.o dprint.o
 	$(CC) $(LDFLAGS) -shared -Wl -o $@ $^
 
 dnetw: dnetw.o shmem.o dprint.o
-	$(CC) $(LDFLAGS) -o $@ $^ -lmicrohttpd -lutil
+	$(CC) $(LDFLAGS) -o $@ $^ $(LIBS) -lutil
 
 dshm: dshm.o shmem.o
 	$(CC) $(LDFLAGS) -o $@ $^

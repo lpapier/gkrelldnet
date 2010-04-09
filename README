@@ -23,7 +23,7 @@ GKrellDnet provides
   monitor the crunch-o-meter. This is because the client doesn't print the
   crunch'o'meter if the client output is not a tty.
   This is why I have written this wrapper.
-  The wrapper now has a builtin web server (version 0.15). This make it easier to read
+  The wrapper now has a builtin web server (version 0.15+). This make it easier to read
   current crunch-o-meter value from other apps.
 
 * a GKrellM plugin.
@@ -51,6 +51,13 @@ First, compile both the dnet wrapper 'dnetw' and the GKrellDnet plugin:
 
 tar xvfz gkrelldnet-X.Y.tar.gz
 cd gkrelldnet-X.Y
+make
+
+If you want to compile the builtin web server (requires libmicrohttpd)
+
+tar xvfz gkrelldnet-X.Y.tar.gz
+cd gkrelldnet-X.Y
+sed -i "/98912660$/,+2 s/^#//" Makefile
 make
 
 To install the GKrellDnet plugin in ~/.gkrellm/plugins

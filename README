@@ -1,19 +1,19 @@
 
-Copyright (c) 2000-2010 by Laurent Papier.  This program is free software
+Copyright (c) 2000-2012 by Laurent Papier.  This program is free software
 which I release under the GNU General Public License.
 
 Description
 ===========
-gkrelldnet is a monitoring system for Distributed.net client.
-(see http://gkrelldnet.sourceforge.net/)
+[GKrellDnet](http://gkrelldnet.sourceforge.net/) is a monitoring system for
+[Distributed.net](http://www.distributed.net/) client.
 
 Requirements
 ============
 * a Linux system with kernel support for Unix 98 (the wrapper will only work
   on Linux system but can be ported to other Unix system).
-* a working Distributed.net client (see http://www.distributed.net/).
-* GKrellM multi-monitor app (2.0 or better) (see http://gkrellm.net/).
-* libmicrohttpd (optional) for the dnetw builtin web server.
+* a working [Distributed.net](http://www.distributed.net/) client.
+* [GKrellM](http://gkrellm.net/) multi-monitor app (2.0 or better).
+* [libmicrohttpd](http://www.gnu.org/software/libmicrohttpd/) (optional) for the dnetw builtin web server.
 
 
 GKrellDnet provides
@@ -47,31 +47,32 @@ Limitation
 
 Installation
 ============
-First, compile both the dnet wrapper 'dnetw' and the GKrellDnet plugin:
+First, compile both the dnet wrapper `dnetw` and the GKrellDnet plugin:
 
-tar xvfz gkrelldnet-X.Y.tar.gz
-cd gkrelldnet-X.Y
-make
+    tar xvfz gkrelldnet-X.Y.tar.gz
+    cd gkrelldnet-X.Y
+    make
 
 If you want to compile the builtin web server (requires libmicrohttpd)
 
-tar xvfz gkrelldnet-X.Y.tar.gz
-cd gkrelldnet-X.Y
-sed -i "/98912660$/,+2 s/^#//" Makefile
-make
+    tar xvfz gkrelldnet-X.Y.tar.gz
+    cd gkrelldnet-X.Y
+    sed -i "/98912660$/,+2 s/^#//" Makefile
+    make
 
-To install the GKrellDnet plugin in ~/.gkrellm/plugins
-make install
+To install the GKrellDnet plugin in `~/.gkrellm/plugins`
 
-then you need to copy the wrapper 'dnetw' somewhere in your path. I choose to
+    make install
+
+then you need to copy the wrapper `dnetw` somewhere in your path. I choose to
 copy it in the same directory as the distributed.net client and add this
 directory in my path.
 
-It is very important for the plugin to work, that BOTH dnetc and dnetw are in
-your path. Please check your PATH variable.
-In fact, gkrellm need that both 'dnetc' AND 'dnetw' are in his PATH variable.
+It is very important for the plugin to work, that __BOTH__ dnetc and dnetw are in
+your path. Please check your `$PATH` variable.
+In fact, gkrellm need that both `dnetc` AND `dnetw` are in his `$PATH` variable.
 
-NOTE: you don't need to be root to install this package.
+__NOTE__: you don't need to be root to install this package.
 
 
 Usage
@@ -79,55 +80,65 @@ Usage
 
 First you need to setup your dnet client. Please see dnetc documentation.
 Now, you must use the wrapper to start the dnet client or you can left click in
-the GKrellM plugin (be sure that the 'dnetc' executable is in the PATH of
+the GKrellM plugin (be sure that the `dnetc` executable is in the PATH of
 gkrellm, see install section).
 
-Since version 0.15, dnetw includes a builtin web server. You can active it with '--port|-p'
-option. dnetw will then listen on port passed as argument. You can provide a format string
-parameter to the web server via the 'f' cgi parameter.
-IMPORTANT: the web server only listen on localhost IP for security reason.
+Since version 0.15, dnetw includes a builtin web server. You can active it with `--port|-p` option.
+dnetw will then listen on port passed as argument. You can provide a format string
+parameter to the web server via the `f` cgi parameter.
 
-Example:
+__IMPORTANT__: the web server only listen on localhost IP for security reason.
+
+### Example:
 starting the wrapper with the builtin web server listening on port 1234.
-dnetw -q -p 1234
+
+    dnetw -q -p 1234
 
 reading current values (default output)
-curl http://localhost:1234/
-ogr:1:3:351.54Gn:85.06Gn
+
+    curl http://localhost:1234/
+    ogr:1:3:351.54Gn:85.06Gn
 
 reading current values (custom output)
-curl 'http://localhost:1234/?f=$c:%20$i/$o%20-%20$p0/$p1'
-ogr: 1/3 - 351.76Gn/85.30Gn
 
-possible formating are:
-  $i is the input work units
-  $o is the output work units
-  $c/$C is the current contest in lowercase/uppercase
-  $pn is the progress indicator value in current block/stub on CPU #n ($p <=> $p0)
+    curl 'http://localhost:1234/?f=$c:%20$i/$o%20-%20$p0/$p1'
+    ogr: 1/3 - 351.76Gn/85.30Gn
+
+### Possible formating
+
+  + $i is the input work units
+  + $o is the output work units
+  + $c/$C is the current contest in lowercase/uppercase
+  + $pn is the progress indicator value in current block/stub on CPU #n ($p <=> $p0)
 
 VERY IMPORTANT:
 ---------------
-dnetw only works if you DO NOT redirect the client output to a file.
-The client output MUST be stdout. So check your client configuration.
+dnetw only works if you __DO NOT__ redirect the client output to a file.
+The client output __MUST__ be stdout. So check your client configuration.
 The new absolute style crunch-o-meter is supported in v0.7, so you can set
 relative or absolute mode in the dnet client config.
 Currently, 'live-rate' is not supported. Wait for the next release.
 
 If you want to redirect the dnet client output to a file you must use dnetw
-option '-l'.
+option `-l`.
 
-ex: dnetw -l dnet.log
+    dnetw -l dnet.log
+
 this command will start and monitor the dnet client and redirect the client
-output to dnet.log.
+output to `dnet.log`.
 
-ex: dnetw
+    dnetw
+
 this command will start and monitor the dnet client and print the client
 output on your terminal.
 
 Now, it's possible to give the full dnetc command line to dnetw.
-ex: dnetw -c "dnetc -numcpu 2" -l dnet.log
+
+    dnetw -c "dnetc -numcpu 2" -l dnet.log
+
 this command will force the client to start 2 crunchers.
-NOTE: you must enclose the command line with simple or double quotes. (read
+
+__NOTE__: you must enclose the command line with simple or double quotes. (read
 your shell man page for more info).
 
 IMPORTANT:
@@ -143,17 +154,17 @@ Open source make it possible
 ============================
 I have start writing a gkrellm plugin to monitor the dnetw output. But you can
 write your own monitoring applet (WindowMaker Dock, Gnome/KDE applets or
-epplets), I will only work on the wrapper 'dnetw' and the gkrellm plugin.
+epplets), I will only work on the wrapper `dnetw` and the gkrellm plugin.
 
 Both the wrapper and the plugin seem stable on my system (Fedora Core 12).
 If you have problems, first check installation and usage section of this file.
 If you still have problems you can contact me.
 
-Laurent Papier
-papier@tuxfan.net
+Laurent Papier - <papier@tuxfan.net>
 
 
 Thanks to
 =========
-Bill Wilson <bill[at]gkrellm.net> for this really great monitoring tool.
-Christoph Hohmann <reboot[at]gmx.ch> for the multi krell patch.
+Bill Wilson for this really great monitoring tool.
+
+Christoph Hohmann for the multi krell patch.
